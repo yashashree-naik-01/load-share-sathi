@@ -14,7 +14,225 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          booking_date: string
+          completion_date: string | null
+          created_at: string
+          distance_km: number | null
+          farmer_id: string
+          farmer_load_id: string
+          id: string
+          status: string
+          total_price: number
+          truck_owner_id: string
+          truck_route_id: string
+          updated_at: string
+        }
+        Insert: {
+          booking_date?: string
+          completion_date?: string | null
+          created_at?: string
+          distance_km?: number | null
+          farmer_id: string
+          farmer_load_id: string
+          id?: string
+          status?: string
+          total_price: number
+          truck_owner_id: string
+          truck_route_id: string
+          updated_at?: string
+        }
+        Update: {
+          booking_date?: string
+          completion_date?: string | null
+          created_at?: string
+          distance_km?: number | null
+          farmer_id?: string
+          farmer_load_id?: string
+          id?: string
+          status?: string
+          total_price?: number
+          truck_owner_id?: string
+          truck_route_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_farmer_load_id_fkey"
+            columns: ["farmer_load_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_loads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_truck_owner_id_fkey"
+            columns: ["truck_owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_truck_route_id_fkey"
+            columns: ["truck_route_id"]
+            isOneToOne: false
+            referencedRelation: "truck_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      farmer_loads: {
+        Row: {
+          created_at: string
+          crop_type: string
+          destination: string
+          estimated_price: number | null
+          farmer_id: string
+          id: string
+          pickup_date: string
+          pickup_location: string
+          pickup_time: string | null
+          quantity: number
+          status: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          crop_type: string
+          destination: string
+          estimated_price?: number | null
+          farmer_id: string
+          id?: string
+          pickup_date: string
+          pickup_location: string
+          pickup_time?: string | null
+          quantity: number
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          crop_type?: string
+          destination?: string
+          estimated_price?: number | null
+          farmer_id?: string
+          id?: string
+          pickup_date?: string
+          pickup_location?: string
+          pickup_time?: string | null
+          quantity?: number
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farmer_loads_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          location: string
+          phone: string
+          updated_at: string
+          user_id: string
+          user_type: string
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          location: string
+          phone: string
+          updated_at?: string
+          user_id: string
+          user_type: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          location?: string
+          phone?: string
+          updated_at?: string
+          user_id?: string
+          user_type?: string
+        }
+        Relationships: []
+      }
+      truck_routes: {
+        Row: {
+          available_date: string
+          available_time: string | null
+          capacity: number
+          capacity_unit: string
+          created_at: string
+          end_location: string
+          id: string
+          price_per_km: number
+          start_location: string
+          status: string
+          truck_owner_id: string
+          updated_at: string
+          vehicle_type: string
+        }
+        Insert: {
+          available_date: string
+          available_time?: string | null
+          capacity: number
+          capacity_unit?: string
+          created_at?: string
+          end_location: string
+          id?: string
+          price_per_km: number
+          start_location: string
+          status?: string
+          truck_owner_id: string
+          updated_at?: string
+          vehicle_type: string
+        }
+        Update: {
+          available_date?: string
+          available_time?: string | null
+          capacity?: number
+          capacity_unit?: string
+          created_at?: string
+          end_location?: string
+          id?: string
+          price_per_km?: number
+          start_location?: string
+          status?: string
+          truck_owner_id?: string
+          updated_at?: string
+          vehicle_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_routes_truck_owner_id_fkey"
+            columns: ["truck_owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

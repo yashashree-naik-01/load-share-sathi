@@ -6,26 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Truck, Plus, Package, MapPin, Calendar, Weight, IndianRupee, LogOut } from "lucide-react";
+import { Truck, Plus, Package, MapPin, Calendar, Weight, IndianRupee, LogOut, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface Load {
-  id: string;
-  goodsType: string;
-  weight: string;
-  pickupLocation: string;
-  dropLocation: string;
-  pickupDate: string;
-  expectedPrice: string;
-  description: string;
-  status: 'posted' | 'matched' | 'booked';
-}
+import { useSupabase, type FarmerLoad } from "@/hooks/useSupabase";
 
 const FarmerDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { farmerLoads, profiles, loading, createFarmerLoad } = useSupabase();
   const [user, setUser] = useState<any>(null);
-  const [loads, setLoads] = useState<Load[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [showPostForm, setShowPostForm] = useState(false);
   const [formData, setFormData] = useState({
     goodsType: '',
@@ -50,29 +40,24 @@ const FarmerDashboard = () => {
   ];
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('rurallink_user');
-    if (!storedUser) {
-      navigate('/login');
-      return;
+    // For demo purposes, simulate a logged-in farmer
+    const demoFarmer = profiles.find(p => p.user_type === 'farmer');
+    if (demoFarmer) {
+      setUser({ 
+        id: demoFarmer.id, 
+        name: demoFarmer.full_name, 
+        type: 'farmer',
+        phone: demoFarmer.phone,
+        location: demoFarmer.location
+      });
+      setUserProfile(demoFarmer);
     }
-    
-    const userData = JSON.parse(storedUser);
-    if (userData.type !== 'farmer') {
-      navigate('/truck-dashboard');
-      return;
-    }
-    
-    setUser(userData);
-    
-    // Load farmer's loads
-    const storedLoads = localStorage.getItem(`loads_${userData.id}`) || '[]';
-    setLoads(JSON.parse(storedLoads));
-  }, [navigate]);
+  }, [profiles, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.goodsType || !formData.weight || !formData.pickupLocation || !formData.dropLocation) {
+    if (!formData.goodsType || !formData.weight || !formData.pickupLocation || !formData.dropLocation || !userProfile) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -81,36 +66,44 @@ const FarmerDashboard = () => {
       return;
     }
 
-    const newLoad: Load = {
-      id: Date.now().toString(),
-      ...formData,
-      status: 'posted'
-    };
+    try {
+      const newLoad = {
+        farmer_id: userProfile.id,
+        crop_type: formData.goodsType,
+        quantity: parseFloat(formData.weight),
+        unit: 'kg',
+        pickup_location: formData.pickupLocation,
+        destination: formData.dropLocation,
+        pickup_date: formData.pickupDate || new Date().toISOString().split('T')[0],
+        pickup_time: null,
+        estimated_price: formData.expectedPrice ? parseFloat(formData.expectedPrice) : null,
+        status: 'pending' as const
+      };
 
-    const updatedLoads = [...loads, newLoad];
-    setLoads(updatedLoads);
-    localStorage.setItem(`loads_${user.id}`, JSON.stringify(updatedLoads));
-    
-    // Also add to global loads for matching
-    const globalLoads = JSON.parse(localStorage.getItem('global_loads') || '[]');
-    globalLoads.push({ ...newLoad, farmerId: user.id, farmerName: user.name, farmerPhone: user.phone });
-    localStorage.setItem('global_loads', JSON.stringify(globalLoads));
+      await createFarmerLoad(newLoad);
 
-    toast({
-      title: "Load Posted Successfully!",
-      description: "Your load has been posted and trucks will be notified."
-    });
+      toast({
+        title: "Load Posted Successfully!",
+        description: "Your load has been posted and trucks will be notified."
+      });
 
-    setFormData({
-      goodsType: '',
-      weight: '',
-      pickupLocation: '',
-      dropLocation: '',
-      pickupDate: '',
-      expectedPrice: '',
-      description: ''
-    });
-    setShowPostForm(false);
+      setFormData({
+        goodsType: '',
+        weight: '',
+        pickupLocation: '',
+        dropLocation: '',
+        pickupDate: '',
+        expectedPrice: '',
+        description: ''
+      });
+      setShowPostForm(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to post load. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const updateFormData = (field: string, value: string) => {
@@ -126,7 +119,18 @@ const FarmerDashboard = () => {
     navigate(`/matches/${loadId}`);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!user) return null;
+
+  // Get farmer's loads
+  const userLoads = farmerLoads.filter(load => load.farmer_id === userProfile?.id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -272,7 +276,7 @@ const FarmerDashboard = () => {
 
         {/* Loads List */}
         <div className="grid gap-6">
-          {loads.length === 0 ? (
+          {userLoads.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>
                 <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -287,54 +291,48 @@ const FarmerDashboard = () => {
               </CardContent>
             </Card>
           ) : (
-            loads.map(load => (
+            userLoads.map(load => (
               <Card key={load.id} className="shadow-soft">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-primary">{load.goodsType}</CardTitle>
-                      <CardDescription className="flex items-center space-x-4 mt-2">
-                        <span className="flex items-center">
-                          <Weight className="h-4 w-4 mr-1" />
-                          {load.weight} tons
-                        </span>
-                        <span className="flex items-center">
-                          <IndianRupee className="h-4 w-4 mr-1" />
-                          ₹{load.expectedPrice || 'Negotiable'}
-                        </span>
-                      </CardDescription>
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      load.status === 'posted' ? 'bg-accent text-accent-foreground' :
-                      load.status === 'matched' ? 'bg-primary text-primary-foreground' :
-                      'bg-secondary text-secondary-foreground'
-                    }`}>
-                      {load.status === 'posted' ? 'Posted' : 
-                       load.status === 'matched' ? 'Matched' : 'Booked'}
-                    </div>
+                  <div>
+                    <CardTitle className="text-primary">{load.crop_type}</CardTitle>
+                    <CardDescription className="flex items-center space-x-4 mt-2">
+                      <span className="flex items-center">
+                        <Weight className="h-4 w-4 mr-1" />
+                        {load.quantity} {load.unit}
+                      </span>
+                      <span className="flex items-center">
+                        <IndianRupee className="h-4 w-4 mr-1" />
+                        ₹{load.estimated_price || 'Negotiable'}
+                      </span>
+                    </CardDescription>
+                  </div>
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    load.status === 'pending' ? 'bg-accent text-accent-foreground' :
+                    load.status === 'matched' ? 'bg-primary text-primary-foreground' :
+                    'bg-secondary text-secondary-foreground'
+                  }`}>
+                    {load.status === 'pending' ? 'Posted' : 
+                     load.status === 'matched' ? 'Matched' : 'Booked'}
+                  </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center text-muted-foreground">
                       <MapPin className="h-4 w-4 mr-2" />
-                      <span>From: {load.pickupLocation}</span>
+                      <span>From: {load.pickup_location}</span>
                     </div>
                     <div className="flex items-center text-muted-foreground">
                       <MapPin className="h-4 w-4 mr-2" />
-                      <span>To: {load.dropLocation}</span>
+                      <span>To: {load.destination}</span>
                     </div>
-                    {load.pickupDate && (
-                      <div className="flex items-center text-muted-foreground">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        <span>Pickup: {new Date(load.pickupDate).toLocaleDateString()}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center text-muted-foreground">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      <span>Pickup: {new Date(load.pickup_date).toLocaleDateString()}</span>
+                    </div>
                   </div>
-                  
-                  {load.description && (
-                    <p className="text-muted-foreground mb-4">{load.description}</p>
-                  )}
                   
                   <div className="flex space-x-2">
                     <Button 

@@ -5,39 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Truck, Plus, Route, MapPin, Calendar, Weight, IndianRupee, LogOut, Search } from "lucide-react";
+import { Truck, Plus, Route, MapPin, Calendar, Weight, IndianRupee, LogOut, Search, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface TruckRoute {
-  id: string;
-  fromLocation: string;
-  toLocation: string;
-  availableDate: string;
-  capacity: string;
-  pricePerKm: string;
-  vehicleType: string;
-  status: 'available' | 'booked';
-}
-
-interface LoadRequest {
-  id: string;
-  goodsType: string;
-  weight: string;
-  pickupLocation: string;
-  dropLocation: string;
-  pickupDate: string;
-  expectedPrice: string;
-  farmerName: string;
-  farmerPhone: string;
-  farmerId: string;
-}
+import { useSupabase, type TruckRoute, type FarmerLoad, type Profile } from "@/hooks/useSupabase";
 
 const TruckDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { truckRoutes, farmerLoads, profiles, loading, createTruckRoute } = useSupabase();
   const [user, setUser] = useState<any>(null);
-  const [routes, setRoutes] = useState<TruckRoute[]>([]);
-  const [availableLoads, setAvailableLoads] = useState<LoadRequest[]>([]);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [showRouteForm, setShowRouteForm] = useState(false);
   const [formData, setFormData] = useState({
     fromLocation: '',
@@ -61,33 +38,24 @@ const TruckDashboard = () => {
   ];
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('rurallink_user');
-    if (!storedUser) {
-      navigate('/login');
-      return;
+    // For demo purposes, simulate a logged-in truck owner
+    const demoTruckOwner = profiles.find(p => p.user_type === 'truck_owner');
+    if (demoTruckOwner) {
+      setUser({ 
+        id: demoTruckOwner.id, 
+        name: demoTruckOwner.full_name, 
+        type: 'truck',
+        phone: demoTruckOwner.phone,
+        location: demoTruckOwner.location
+      });
+      setUserProfile(demoTruckOwner);
     }
-    
-    const userData = JSON.parse(storedUser);
-    if (userData.type !== 'truck') {
-      navigate('/farmer-dashboard');
-      return;
-    }
-    
-    setUser(userData);
-    
-    // Load truck routes
-    const storedRoutes = localStorage.getItem(`routes_${userData.id}`) || '[]';
-    setRoutes(JSON.parse(storedRoutes));
-    
-    // Load available loads
-    const globalLoads = JSON.parse(localStorage.getItem('global_loads') || '[]');
-    setAvailableLoads(globalLoads);
-  }, [navigate]);
+  }, [profiles, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.fromLocation || !formData.toLocation || !formData.capacity) {
+    if (!formData.fromLocation || !formData.toLocation || !formData.capacity || !userProfile) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -96,30 +64,43 @@ const TruckDashboard = () => {
       return;
     }
 
-    const newRoute: TruckRoute = {
-      id: Date.now().toString(),
-      ...formData,
-      status: 'available'
-    };
+    try {
+      const newRoute = {
+        truck_owner_id: userProfile.id,
+        vehicle_type: formData.vehicleType || 'Truck',
+        capacity: parseFloat(formData.capacity),
+        capacity_unit: 'kg',
+        start_location: formData.fromLocation,
+        end_location: formData.toLocation,
+        available_date: formData.availableDate || new Date().toISOString().split('T')[0],
+        available_time: null,
+        price_per_km: parseFloat(formData.pricePerKm) || 25,
+        status: 'available' as const
+      };
 
-    const updatedRoutes = [...routes, newRoute];
-    setRoutes(updatedRoutes);
-    localStorage.setItem(`routes_${user.id}`, JSON.stringify(updatedRoutes));
+      await createTruckRoute(newRoute);
 
-    toast({
-      title: "Route Posted Successfully!",
-      description: "Your route has been posted and farmers will be notified."
-    });
+      toast({
+        title: "Route Posted Successfully!",
+        description: "Your route has been posted and farmers will be notified."
+      });
 
-    setFormData({
-      fromLocation: '',
-      toLocation: '',
-      availableDate: '',
-      capacity: '',
-      pricePerKm: '',
-      vehicleType: ''
-    });
-    setShowRouteForm(false);
+      setFormData({
+        fromLocation: '',
+        toLocation: '',
+        availableDate: '',
+        capacity: '',
+        pricePerKm: '',
+        vehicleType: ''
+      });
+      setShowRouteForm(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to post route. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const updateFormData = (field: string, value: string) => {
@@ -131,10 +112,11 @@ const TruckDashboard = () => {
     navigate('/');
   };
 
-  const acceptLoad = (load: LoadRequest) => {
+  const acceptLoad = (load: FarmerLoad) => {
+    const farmerProfile = profiles.find(p => p.id === load.farmer_id);
     toast({
       title: "Load Request Accepted!",
-      description: `You've accepted ${load.farmerName}'s load. Contact details will be shared.`
+      description: `You've accepted ${farmerProfile?.full_name}'s load. Contact details will be shared.`
     });
     
     // In a real app, this would notify the farmer and create a booking
@@ -158,17 +140,29 @@ const TruckDashboard = () => {
     return distances[key] || distances[reverseKey] || Math.floor(Math.random() * 800) + 200;
   };
 
-  const isRouteCompatible = (route: TruckRoute, load: LoadRequest) => {
-    const routeCapacity = parseFloat(route.capacity);
-    const loadWeight = parseFloat(load.weight);
+  const isRouteCompatible = (route: TruckRoute, load: FarmerLoad) => {
+    const routeCapacity = route.capacity;
+    const loadWeight = load.quantity;
     
     // Check if truck has enough capacity and route is compatible
     return routeCapacity >= loadWeight && 
-           (route.fromLocation.includes(load.pickupLocation.split(',')[0]) || 
-            route.toLocation.includes(load.dropLocation.split(',')[0]));
+           (route.start_location.includes(load.pickup_location.split(',')[0]) || 
+            route.end_location.includes(load.destination.split(',')[0]));
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!user) return null;
+
+  // Get truck owner's routes and available loads
+  const userRoutes = truckRoutes.filter(route => route.truck_owner_id === userProfile?.id);
+  const availableLoads = farmerLoads.filter(load => load.status === 'pending');
 
   return (
     <div className="min-h-screen bg-background">
@@ -307,7 +301,7 @@ const TruckDashboard = () => {
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-4">My Routes</h2>
             <div className="space-y-4">
-              {routes.length === 0 ? (
+              {userRoutes.length === 0 ? (
                 <Card className="text-center py-8">
                   <CardContent>
                     <Route className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -322,23 +316,23 @@ const TruckDashboard = () => {
                   </CardContent>
                 </Card>
               ) : (
-                routes.map(route => (
+                userRoutes.map(route => (
                   <Card key={route.id} className="shadow-soft">
                     <CardHeader>
                       <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-secondary">{route.vehicleType || 'Truck'}</CardTitle>
-                          <CardDescription className="flex items-center space-x-4 mt-2">
-                            <span className="flex items-center">
-                              <Weight className="h-4 w-4 mr-1" />
-                              {route.capacity} tons
-                            </span>
-                            <span className="flex items-center">
-                              <IndianRupee className="h-4 w-4 mr-1" />
-                              ₹{route.pricePerKm}/km
-                            </span>
-                          </CardDescription>
-                        </div>
+                      <div>
+                        <CardTitle className="text-secondary">{route.vehicle_type || 'Truck'}</CardTitle>
+                        <CardDescription className="flex items-center space-x-4 mt-2">
+                          <span className="flex items-center">
+                            <Weight className="h-4 w-4 mr-1" />
+                            {route.capacity} {route.capacity_unit}
+                          </span>
+                          <span className="flex items-center">
+                            <IndianRupee className="h-4 w-4 mr-1" />
+                            ₹{route.price_per_km}/km
+                          </span>
+                        </CardDescription>
+                      </div>
                         <div className={`px-3 py-1 rounded-full text-sm font-medium ${
                           route.status === 'available' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
                         }`}>
@@ -350,18 +344,16 @@ const TruckDashboard = () => {
                       <div className="space-y-2">
                         <div className="flex items-center text-muted-foreground">
                           <MapPin className="h-4 w-4 mr-2" />
-                          <span>From: {route.fromLocation}</span>
+                          <span>From: {route.start_location}</span>
                         </div>
                         <div className="flex items-center text-muted-foreground">
                           <MapPin className="h-4 w-4 mr-2" />
-                          <span>To: {route.toLocation}</span>
+                          <span>To: {route.end_location}</span>
                         </div>
-                        {route.availableDate && (
-                          <div className="flex items-center text-muted-foreground">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            <span>Available: {new Date(route.availableDate).toLocaleDateString()}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center text-muted-foreground">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          <span>Available: {new Date(route.available_date).toLocaleDateString()}</span>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -386,26 +378,27 @@ const TruckDashboard = () => {
                 </Card>
               ) : (
                 availableLoads.map(load => {
-                  const distance = calculateDistance(load.pickupLocation, load.dropLocation);
-                  const isCompatible = routes.some(route => isRouteCompatible(route, load));
+                  const distance = calculateDistance(load.pickup_location, load.destination);
+                  const isCompatible = userRoutes.some(route => isRouteCompatible(route, load));
+                  const farmerProfile = profiles.find(p => p.id === load.farmer_id);
                   
                   return (
                     <Card key={load.id} className={`shadow-soft ${isCompatible ? 'border-primary border-2' : ''}`}>
                       <CardHeader>
                         <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-primary">{load.goodsType}</CardTitle>
-                            <CardDescription className="flex items-center space-x-4 mt-2">
-                              <span className="flex items-center">
-                                <Weight className="h-4 w-4 mr-1" />
-                                {load.weight} tons
-                              </span>
-                              <span className="flex items-center">
-                                <IndianRupee className="h-4 w-4 mr-1" />
-                                ₹{load.expectedPrice || 'Negotiable'}
-                              </span>
-                            </CardDescription>
-                          </div>
+                        <div>
+                          <CardTitle className="text-primary">{load.crop_type}</CardTitle>
+                          <CardDescription className="flex items-center space-x-4 mt-2">
+                            <span className="flex items-center">
+                              <Weight className="h-4 w-4 mr-1" />
+                              {load.quantity} {load.unit}
+                            </span>
+                            <span className="flex items-center">
+                              <IndianRupee className="h-4 w-4 mr-1" />
+                              ₹{load.estimated_price || 'Negotiable'}
+                            </span>
+                          </CardDescription>
+                        </div>
                           {isCompatible && (
                             <div className="px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm font-medium">
                               Compatible
@@ -414,30 +407,28 @@ const TruckDashboard = () => {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-2 mb-4">
-                          <div className="flex items-center text-muted-foreground">
-                            <MapPin className="h-4 w-4 mr-2" />
-                            <span>From: {load.pickupLocation}</span>
-                          </div>
-                          <div className="flex items-center text-muted-foreground">
-                            <MapPin className="h-4 w-4 mr-2" />
-                            <span>To: {load.dropLocation}</span>
-                          </div>
-                          <div className="flex items-center text-muted-foreground">
-                            <Route className="h-4 w-4 mr-2" />
-                            <span>Distance: ~{distance} km</span>
-                          </div>
-                          {load.pickupDate && (
-                            <div className="flex items-center text-muted-foreground">
-                              <Calendar className="h-4 w-4 mr-2" />
-                              <span>Pickup: {new Date(load.pickupDate).toLocaleDateString()}</span>
-                            </div>
-                          )}
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-muted-foreground">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          <span>From: {load.pickup_location}</span>
+                        </div>
+                        <div className="flex items-center text-muted-foreground">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          <span>To: {load.destination}</span>
+                        </div>
+                        <div className="flex items-center text-muted-foreground">
+                          <Route className="h-4 w-4 mr-2" />
+                          <span>Distance: ~{distance} km</span>
+                        </div>
+                        <div className="flex items-center text-muted-foreground">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          <span>Pickup: {new Date(load.pickup_date).toLocaleDateString()}</span>
+                        </div>
                         </div>
                         
                         <div className="flex justify-between items-center">
                           <div className="text-sm text-muted-foreground">
-                            Farmer: {load.farmerName} | {load.farmerPhone}
+                            Farmer: {farmerProfile?.full_name} | {farmerProfile?.phone}
                           </div>
                           <Button 
                             variant="default" 

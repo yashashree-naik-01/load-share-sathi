@@ -3,8 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Truck, ArrowLeft, MapPin, Weight, IndianRupee, Star, Phone, User, Route } from "lucide-react";
+import { Truck, ArrowLeft, MapPin, Weight, IndianRupee, Star, Phone, User, Route, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabase, type FarmerLoad, type TruckRoute, type Profile } from "@/hooks/useSupabase";
 
 interface TruckMatch {
   id: string;
@@ -26,24 +27,28 @@ const Matches = () => {
   const { loadId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [load, setLoad] = useState<any>(null);
+  const { farmerLoads, truckRoutes, profiles, loading, createBooking } = useSupabase();
+  const [load, setLoad] = useState<FarmerLoad | null>(null);
   const [matches, setMatches] = useState<TruckMatch[]>([]);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('rurallink_user');
-    if (!storedUser) {
-      navigate('/login');
-      return;
-    }
+    if (loading || !farmerLoads.length || !truckRoutes.length || !profiles.length) return;
     
-    const userData = JSON.parse(storedUser);
-    setUser(userData);
+    // For demo purposes, simulate a logged-in farmer
+    const demoFarmer = profiles.find(p => p.user_type === 'farmer');
+    if (demoFarmer) {
+      setUser({ 
+        id: demoFarmer.id, 
+        name: demoFarmer.full_name, 
+        type: 'farmer',
+        phone: demoFarmer.phone,
+        location: demoFarmer.location
+      });
+    }
 
     // Get the specific load
-    const storedLoads = localStorage.getItem(`loads_${userData.id}`) || '[]';
-    const loads = JSON.parse(storedLoads);
-    const currentLoad = loads.find((l: any) => l.id === loadId);
+    const currentLoad = farmerLoads.find(l => l.id === loadId);
     
     if (!currentLoad) {
       navigate('/farmer-dashboard');
@@ -54,68 +59,58 @@ const Matches = () => {
     
     // Generate AI matches (in real app, this would be an API call)
     generateMatches(currentLoad);
-  }, [loadId, navigate]);
+  }, [loadId, navigate, loading, farmerLoads, truckRoutes, profiles]);
 
-  const generateMatches = (currentLoad: any) => {
-    // Simulated AI matching engine
-    const mockTrucks: TruckMatch[] = [
-      {
-        id: '1',
-        ownerName: 'Rajesh Kumar',
-        ownerPhone: '+91 98765 43210',
-        vehicleType: 'Medium Truck (10-12 MT)',
-        capacity: '10',
-        pricePerKm: '28',
-        fromLocation: currentLoad.pickupLocation,
-        toLocation: currentLoad.dropLocation,
-        rating: 4.8,
-        distance: calculateDistance(currentLoad.pickupLocation, currentLoad.dropLocation),
-        estimatedCost: 0,
-        availableDate: currentLoad.pickupDate || new Date().toISOString().split('T')[0],
-        matchScore: 95
-      },
-      {
-        id: '2',
-        ownerName: 'Suresh Patel',
-        ownerPhone: '+91 87654 32109',
-        vehicleType: 'Large Truck (15-20 MT)',
-        capacity: '18',
-        pricePerKm: '32',
-        fromLocation: currentLoad.pickupLocation,
-        toLocation: currentLoad.dropLocation,
-        rating: 4.6,
-        distance: calculateDistance(currentLoad.pickupLocation, currentLoad.dropLocation),
-        estimatedCost: 0,
-        availableDate: currentLoad.pickupDate || new Date().toISOString().split('T')[0],
-        matchScore: 89
-      },
-      {
-        id: '3',
-        ownerName: 'Amit Singh',
-        ownerPhone: '+91 76543 21098',
-        vehicleType: 'Small Truck (7-8 MT)',
-        capacity: '7.5',
-        pricePerKm: '25',
-        fromLocation: currentLoad.pickupLocation,
-        toLocation: currentLoad.dropLocation,
-        rating: 4.9,
-        distance: calculateDistance(currentLoad.pickupLocation, currentLoad.dropLocation),
-        estimatedCost: 0,
-        availableDate: currentLoad.pickupDate || new Date().toISOString().split('T')[0],
-        matchScore: 78
-      }
-    ];
+  const generateMatches = (currentLoad: FarmerLoad) => {
+    // AI matching engine using real truck data
+    const compatibleTrucks = truckRoutes
+      .filter(route => {
+        // Check capacity compatibility
+        const hasCapacity = route.capacity >= currentLoad.quantity;
+        
+        // Check route compatibility (simplified)
+        const routeStart = route.start_location.toLowerCase();
+        const routeEnd = route.end_location.toLowerCase();
+        const loadStart = currentLoad.pickup_location.toLowerCase();
+        const loadEnd = currentLoad.destination.toLowerCase();
+        
+        const routeCompatible = routeStart.includes(loadStart.split(',')[0]) || 
+                               routeEnd.includes(loadEnd.split(',')[0]) ||
+                               routeStart.includes(loadEnd.split(',')[0]);
+        
+        return hasCapacity && routeCompatible && route.status === 'available';
+      })
+      .map(route => {
+        const truckOwner = profiles.find(p => p.id === route.truck_owner_id);
+        const distance = calculateDistance(currentLoad.pickup_location, currentLoad.destination);
+        const estimatedCost = Math.round(distance * route.price_per_km);
+        
+        // Calculate match score based on multiple factors
+        const capacityScore = Math.min(100, (route.capacity / currentLoad.quantity) * 30);
+        const priceScore = Math.max(0, 50 - (route.price_per_km - 20) * 2);
+        const baseScore = Math.random() * 20 + 70; // Simulate rating-based score
+        const matchScore = Math.round(capacityScore + priceScore + baseScore);
+        
+        return {
+          id: route.id,
+          ownerName: truckOwner?.full_name || 'Unknown Driver',
+          ownerPhone: truckOwner?.phone || '+91 XXXXX XXXXX',
+          vehicleType: route.vehicle_type,
+          capacity: route.capacity.toString(),
+          pricePerKm: route.price_per_km.toString(),
+          fromLocation: route.start_location,
+          toLocation: route.end_location,
+          rating: 4.2 + Math.random() * 0.8, // Simulate ratings between 4.2-5.0
+          distance,
+          estimatedCost,
+          availableDate: route.available_date,
+          matchScore: Math.min(98, matchScore)
+        } as TruckMatch;
+      })
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 5); // Show top 5 matches
 
-    // Calculate estimated costs and filter based on capacity
-    const filteredMatches = mockTrucks
-      .filter(truck => parseFloat(truck.capacity) >= parseFloat(currentLoad.weight))
-      .map(truck => ({
-        ...truck,
-        estimatedCost: Math.round(truck.distance * parseFloat(truck.pricePerKm))
-      }))
-      .sort((a, b) => b.matchScore - a.matchScore);
-
-    setMatches(filteredMatches);
+    setMatches(compatibleTrucks);
   };
 
   const calculateDistance = (from: string, to: string) => {
@@ -139,21 +134,41 @@ const Matches = () => {
     return distances[key] || distances[reverseKey] || Math.floor(Math.random() * 800) + 200;
   };
 
-  const bookTruck = (truck: TruckMatch) => {
-    toast({
-      title: "Booking Confirmed!",
-      description: `You've booked ${truck.ownerName}'s truck. Contact details will be shared.`
-    });
+  const bookTruck = async (truck: TruckMatch) => {
+    if (!load || !user) return;
     
-    // Update load status
-    const storedLoads = localStorage.getItem(`loads_${user.id}`) || '[]';
-    const loads = JSON.parse(storedLoads);
-    const updatedLoads = loads.map((l: any) => 
-      l.id === loadId ? { ...l, status: 'booked', bookedTruck: truck } : l
-    );
-    localStorage.setItem(`loads_${user.id}`, JSON.stringify(updatedLoads));
-    
-    navigate('/farmer-dashboard');
+    try {
+      const truckRoute = truckRoutes.find(r => r.id === truck.id);
+      const truckOwner = profiles.find(p => p.full_name === truck.ownerName);
+      
+      if (!truckRoute || !truckOwner) {
+        throw new Error('Truck or owner not found');
+      }
+      
+      // Create booking
+      await createBooking({
+        farmer_load_id: load.id,
+        truck_route_id: truckRoute.id,
+        farmer_id: load.farmer_id,
+        truck_owner_id: truckOwner.id,
+        total_price: truck.estimatedCost,
+        distance_km: truck.distance,
+        status: 'pending'
+      });
+
+      toast({
+        title: "Booking Confirmed!",
+        description: `You've booked ${truck.ownerName}'s truck. Contact details will be shared.`
+      });
+      
+      navigate('/farmer-dashboard');
+    } catch (error) {
+      toast({
+        title: "Booking Failed",
+        description: "Unable to confirm booking. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getMatchScoreColor = (score: number) => {
@@ -167,6 +182,14 @@ const Matches = () => {
     if (score >= 80) return 'Good Match';
     return 'Fair Match';
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!load) return null;
 
@@ -195,24 +218,24 @@ const Matches = () => {
             <CardDescription>AI is finding the best trucks for your requirements</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="flex items-center space-x-2">
-                <Weight className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">{load.goodsType} - {load.weight} tons</span>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Weight className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-foreground">{load.crop_type} - {load.quantity} {load.unit}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-foreground">{load.pickup_location}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-foreground">{load.destination}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <IndianRupee className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-foreground">Budget: ₹{load.estimated_price || 'Negotiable'}</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">{load.pickupLocation}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">{load.dropLocation}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <IndianRupee className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">Budget: ₹{load.expectedPrice || 'Negotiable'}</span>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
@@ -306,9 +329,9 @@ const Matches = () => {
                   <div className="bg-muted/50 rounded-lg p-4 mb-4">
                     <h4 className="font-semibold text-foreground mb-2">AI Analysis:</h4>
                     <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li>• {parseFloat(truck.capacity) > parseFloat(load.weight) * 1.5 ? 'Excess capacity available for additional goods' : 'Perfect capacity match for your load'}</li>
+                      <li>• {parseFloat(truck.capacity) > load.quantity * 1.5 ? 'Excess capacity available for additional goods' : 'Perfect capacity match for your load'}</li>
                       <li>• {truck.rating >= 4.8 ? 'Highly rated driver with excellent track record' : 'Good reliability rating'}</li>
-                      <li>• {truck.estimatedCost < (parseFloat(load.expectedPrice) || 20000) ? 'Cost-effective option within your budget' : 'Premium service with higher quality'}</li>
+                      <li>• {truck.estimatedCost < (load.estimated_price || 20000) ? 'Cost-effective option within your budget' : 'Premium service with higher quality'}</li>
                       <li>• Route optimization reduces empty return trip by 60%</li>
                     </ul>
                   </div>

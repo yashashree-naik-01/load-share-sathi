@@ -148,6 +148,19 @@ export const useSupabase = () => {
     return data as FarmerLoad;
   };
 
+  const updateTruckRouteStatus = async (routeId: string, status: TruckRoute['status']) => {
+    const { data, error } = await supabase
+      .from('truck_routes')
+      .update({ status })
+      .eq('id', routeId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    setTruckRoutes(prev => prev.map(route => route.id === routeId ? data as TruckRoute : route));
+    return data as TruckRoute;
+  };
+
   return {
     profiles,
     farmerLoads,
@@ -158,6 +171,7 @@ export const useSupabase = () => {
     createTruckRoute,
     createBooking,
     updateLoadStatus,
+    updateTruckRouteStatus,
     refetch: fetchData
   };
 };

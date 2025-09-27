@@ -6,16 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Truck, Plus, Package, MapPin, Calendar, Weight, IndianRupee, LogOut, Loader2 } from "lucide-react";
+import { Truck, Plus, Package, MapPin, Calendar, Weight, IndianRupee, LogOut, Loader2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase, type FarmerLoad } from "@/hooks/useSupabase";
+import { useAuth } from "@/hooks/useAuth";
 
 const FarmerDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { farmerLoads, profiles, loading, createFarmerLoad } = useSupabase();
-  const [user, setUser] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const { farmerLoads, bookings, loading, createFarmerLoad } = useSupabase();
+  const { user, profile, signOut, loading: authLoading } = useAuth();
   const [showPostForm, setShowPostForm] = useState(false);
   const [formData, setFormData] = useState({
     goodsType: '',
@@ -40,24 +40,22 @@ const FarmerDashboard = () => {
   ];
 
   useEffect(() => {
-    // For demo purposes, simulate a logged-in farmer
-    const demoFarmer = profiles.find(p => p.user_type === 'farmer');
-    if (demoFarmer) {
-      setUser({ 
-        id: demoFarmer.id, 
-        name: demoFarmer.full_name, 
-        type: 'farmer',
-        phone: demoFarmer.phone,
-        location: demoFarmer.location
-      });
-      setUserProfile(demoFarmer);
+    // Redirect if not authenticated or not a farmer
+    if (!authLoading && (!user || !profile)) {
+      navigate('/login');
+      return;
     }
-  }, [profiles, navigate]);
+    
+    if (!authLoading && profile && profile.user_type !== 'farmer') {
+      navigate('/truck-dashboard');
+      return;
+    }
+  }, [user, profile, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.goodsType || !formData.weight || !formData.pickupLocation || !formData.dropLocation || !userProfile) {
+    if (!formData.goodsType || !formData.weight || !formData.pickupLocation || !formData.dropLocation || !profile) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -68,7 +66,7 @@ const FarmerDashboard = () => {
 
     try {
       const newLoad = {
-        farmer_id: userProfile.id,
+        farmer_id: profile.id,
         crop_type: formData.goodsType,
         quantity: parseFloat(formData.weight),
         unit: 'kg',
@@ -110,8 +108,8 @@ const FarmerDashboard = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('rurallink_user');
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
 
@@ -127,10 +125,9 @@ const FarmerDashboard = () => {
     );
   }
 
-  if (!user) return null;
-
-  // Get farmer's loads
-  const userLoads = farmerLoads.filter(load => load.farmer_id === userProfile?.id);
+  // Get farmer's loads and bookings
+  const userLoads = farmerLoads.filter(load => load.farmer_id === profile.id);
+  const userBookings = bookings.filter(booking => booking.farmer_id === profile.id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -145,7 +142,7 @@ const FarmerDashboard = () => {
             <span className="text-muted-foreground">Farmer Dashboard</span>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-foreground">Welcome, {user.name}</span>
+            <span className="text-foreground">Welcome, {profile.full_name}</span>
             <Button variant="ghost" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
@@ -161,10 +158,16 @@ const FarmerDashboard = () => {
             <h1 className="text-3xl font-bold text-foreground">My Loads</h1>
             <p className="text-muted-foreground">Manage your transportation requests</p>
           </div>
-          <Button variant="farmer" onClick={() => setShowPostForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Post New Load
-          </Button>
+          <div className="flex space-x-4">
+            <Button variant="outline" onClick={() => navigate('/matches/ai-find')}>
+              <Search className="h-4 w-4 mr-2" />
+              Find AI Matches
+            </Button>
+            <Button variant="default" onClick={() => setShowPostForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Post New Load
+            </Button>
+          </div>
         </div>
 
         {/* Post Load Form */}
@@ -348,6 +351,53 @@ const FarmerDashboard = () => {
             ))
           )}
         </div>
+
+        {/* Bookings Section */}
+        {userBookings.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-foreground mb-6">My Bookings</h2>
+            <div className="grid gap-6">
+              {userBookings.map((booking) => (
+                <Card key={booking.id} className="shadow-soft border-primary border-2">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-primary">Booking #{booking.id.slice(0, 8)}</CardTitle>
+                        <CardDescription>
+                          Status: <span className="capitalize font-medium">{booking.status}</span>
+                        </CardDescription>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-foreground">₹{booking.total_price.toLocaleString()}</div>
+                        <div className="text-sm text-muted-foreground">Total Cost</div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="flex items-center text-muted-foreground">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span>Booked: {new Date(booking.booking_date).toLocaleDateString()}</span>
+                      </div>
+                      {booking.distance_km && (
+                        <div className="flex items-center text-muted-foreground">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          <span>Distance: {booking.distance_km} km</span>
+                        </div>
+                      )}
+                      {booking.completion_date && (
+                        <div className="flex items-center text-muted-foreground">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          <span>Completed: {new Date(booking.completion_date).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

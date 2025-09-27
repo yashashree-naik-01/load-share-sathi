@@ -1,18 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Truck, Users, ArrowLeft } from "lucide-react";
+import { Truck, Users, ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const Register = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const userType = searchParams.get('type') || '';
   const { toast } = useToast();
+  const { signUp, user, loading: authLoading } = useAuth();
+  const [loading, setLoading] = useState(false);
   
   const [selectedType, setSelectedType] = useState(userType);
   const [formData, setFormData] = useState({
@@ -39,7 +42,7 @@ const Register = () => {
     'Large Truck (15-20 MT)', 'Trailer (25+ MT)', 'Tempo Traveller'
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Basic validation
@@ -52,27 +55,58 @@ const Register = () => {
       return;
     }
 
-    // Store user data (in real app, this would be API call)
-    const userData = {
-      ...formData,
-      type: selectedType,
-      id: Date.now().toString()
-    };
-    
-    localStorage.setItem('rurallink_user', JSON.stringify(userData));
-    
-    toast({
-      title: "Registration Successful!",
-      description: `Welcome to RuralLink, ${formData.name}!`
-    });
+    setLoading(true);
 
-    // Navigate to appropriate dashboard
-    navigate(selectedType === 'farmer' ? '/farmer-dashboard' : '/truck-dashboard');
+    try {
+      const userData = {
+        name: formData.name,
+        phone: formData.phone,
+        type: selectedType,
+        farmLocation: formData.farmLocation,
+        vehicleType: formData.vehicleType,
+        capacity: formData.capacity,
+        licenseNumber: formData.licenseNumber
+      };
+
+      const { error } = await signUp(formData.email, formData.password, userData);
+
+      if (error) {
+        toast({
+          title: "Registration Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Registration Successful!",
+        description: `Welcome to RuralLink, ${formData.name}! Please check your email to confirm your account.`
+      });
+
+      // Navigate to appropriate dashboard
+      navigate(selectedType === 'farmer' ? '/farmer-dashboard' : '/truck-dashboard');
+    } catch (error: any) {
+      toast({
+        title: "Registration Failed",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateFormData = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate('/');
+    }
+  }, [user, authLoading, navigate]);
 
   if (!selectedType) {
     return (
@@ -276,9 +310,17 @@ const Register = () => {
             <Button 
               type="submit" 
               className="w-full" 
-              variant={selectedType === 'farmer' ? 'farmer' : 'truck'}
+              variant={selectedType === 'farmer' ? 'default' : 'default'}
+              disabled={loading}
             >
-              Create Account
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                'Create Account'
+              )}
             </Button>
           </form>
           

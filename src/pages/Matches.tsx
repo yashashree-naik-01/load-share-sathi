@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Truck, ArrowLeft, MapPin, Weight, IndianRupee, Star, Phone, User, Route, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase, type FarmerLoad, type TruckRoute, type Profile } from "@/hooks/useSupabase";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TruckMatch {
   id: string;
@@ -27,25 +28,19 @@ const Matches = () => {
   const { loadId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { farmerLoads, truckRoutes, profiles, loading, createBooking } = useSupabase();
+  const { farmerLoads, truckRoutes, profiles, loading, createBooking, updateLoadStatus, updateTruckRouteStatus } = useSupabase();
+  const { user, profile, loading: authLoading } = useAuth();
   const [load, setLoad] = useState<FarmerLoad | null>(null);
   const [matches, setMatches] = useState<TruckMatch[]>([]);
-  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    if (loading || !farmerLoads.length || !truckRoutes.length || !profiles.length) return;
-    
-    // For demo purposes, simulate a logged-in farmer
-    const demoFarmer = profiles.find(p => p.user_type === 'farmer');
-    if (demoFarmer) {
-      setUser({ 
-        id: demoFarmer.id, 
-        name: demoFarmer.full_name, 
-        type: 'farmer',
-        phone: demoFarmer.phone,
-        location: demoFarmer.location
-      });
+    // Redirect if not authenticated
+    if (!authLoading && (!user || !profile)) {
+      navigate('/login');
+      return;
     }
+
+    if (loading || authLoading || !farmerLoads.length || !truckRoutes.length || !profiles.length) return;
 
     // Get the specific load
     const currentLoad = farmerLoads.find(l => l.id === loadId);
@@ -55,11 +50,17 @@ const Matches = () => {
       return;
     }
     
+    // Check if user owns this load
+    if (currentLoad.farmer_id !== profile?.id) {
+      navigate('/farmer-dashboard');
+      return;
+    }
+    
     setLoad(currentLoad);
     
     // Generate AI matches (in real app, this would be an API call)
     generateMatches(currentLoad);
-  }, [loadId, navigate, loading, farmerLoads, truckRoutes, profiles]);
+  }, [loadId, navigate, loading, authLoading, farmerLoads, truckRoutes, profiles, user, profile]);
 
   const generateMatches = (currentLoad: FarmerLoad) => {
     // AI matching engine using real truck data
@@ -135,7 +136,7 @@ const Matches = () => {
   };
 
   const bookTruck = async (truck: TruckMatch) => {
-    if (!load || !user) return;
+    if (!load || !profile) return;
     
     try {
       const truckRoute = truckRoutes.find(r => r.id === truck.id);
@@ -155,6 +156,12 @@ const Matches = () => {
         distance_km: truck.distance,
         status: 'pending'
       });
+
+      // Update load status to booked
+      await updateLoadStatus(load.id, 'booked');
+      
+      // Update truck route status to booked
+      await updateTruckRouteStatus(truckRoute.id, 'booked');
 
       toast({
         title: "Booking Confirmed!",
@@ -183,7 +190,7 @@ const Matches = () => {
     return 'Fair Match';
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

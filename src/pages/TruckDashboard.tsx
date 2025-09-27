@@ -5,16 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Truck, Plus, Route, MapPin, Calendar, Weight, IndianRupee, LogOut, Search, Loader2 } from "lucide-react";
+import { Truck, Plus, Route, MapPin, Calendar, Weight, IndianRupee, LogOut, Search, Loader2, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase, type TruckRoute, type FarmerLoad, type Profile } from "@/hooks/useSupabase";
+import { useAuth } from "@/hooks/useAuth";
 
 const TruckDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { truckRoutes, farmerLoads, profiles, loading, createTruckRoute } = useSupabase();
-  const [user, setUser] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const { truckRoutes, farmerLoads, bookings, loading, createTruckRoute } = useSupabase();
+  const { user, profile, signOut, loading: authLoading } = useAuth();
   const [showRouteForm, setShowRouteForm] = useState(false);
   const [formData, setFormData] = useState({
     fromLocation: '',
@@ -38,24 +38,22 @@ const TruckDashboard = () => {
   ];
 
   useEffect(() => {
-    // For demo purposes, simulate a logged-in truck owner
-    const demoTruckOwner = profiles.find(p => p.user_type === 'truck_owner');
-    if (demoTruckOwner) {
-      setUser({ 
-        id: demoTruckOwner.id, 
-        name: demoTruckOwner.full_name, 
-        type: 'truck',
-        phone: demoTruckOwner.phone,
-        location: demoTruckOwner.location
-      });
-      setUserProfile(demoTruckOwner);
+    // Redirect if not authenticated or not a truck owner
+    if (!authLoading && (!user || !profile)) {
+      navigate('/login');
+      return;
     }
-  }, [profiles, navigate]);
+    
+    if (!authLoading && profile && profile.user_type !== 'truck_owner') {
+      navigate('/farmer-dashboard');
+      return;
+    }
+  }, [user, profile, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.fromLocation || !formData.toLocation || !formData.capacity || !userProfile) {
+    if (!formData.fromLocation || !formData.toLocation || !formData.capacity || !profile) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -66,7 +64,7 @@ const TruckDashboard = () => {
 
     try {
       const newRoute = {
-        truck_owner_id: userProfile.id,
+        truck_owner_id: profile.id,
         vehicle_type: formData.vehicleType || 'Truck',
         capacity: parseFloat(formData.capacity),
         capacity_unit: 'kg',
@@ -107,16 +105,15 @@ const TruckDashboard = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('rurallink_user');
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
 
   const acceptLoad = (load: FarmerLoad) => {
-    const farmerProfile = profiles.find(p => p.id === load.farmer_id);
     toast({
       title: "Load Request Accepted!",
-      description: `You've accepted ${farmerProfile?.full_name}'s load. Contact details will be shared.`
+      description: `You've accepted a load request. Contact details will be shared.`
     });
     
     // In a real app, this would notify the farmer and create a booking
@@ -158,10 +155,8 @@ const TruckDashboard = () => {
     );
   }
 
-  if (!user) return null;
-
   // Get truck owner's routes and available loads
-  const userRoutes = truckRoutes.filter(route => route.truck_owner_id === userProfile?.id);
+  const userRoutes = truckRoutes.filter(route => route.truck_owner_id === profile.id);
   const availableLoads = farmerLoads.filter(load => load.status === 'pending');
 
   return (
@@ -177,7 +172,7 @@ const TruckDashboard = () => {
             <span className="text-muted-foreground">Truck Owner Dashboard</span>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-foreground">Welcome, {user.name}</span>
+            <span className="text-foreground">Welcome, {profile.full_name}</span>
             <Button variant="ghost" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
@@ -380,7 +375,7 @@ const TruckDashboard = () => {
                 availableLoads.map(load => {
                   const distance = calculateDistance(load.pickup_location, load.destination);
                   const isCompatible = userRoutes.some(route => isRouteCompatible(route, load));
-                  const farmerProfile = profiles.find(p => p.id === load.farmer_id);
+                  // Remove farmer profile lookup for now
                   
                   return (
                     <Card key={load.id} className={`shadow-soft ${isCompatible ? 'border-primary border-2' : ''}`}>
@@ -428,7 +423,7 @@ const TruckDashboard = () => {
                         
                         <div className="flex justify-between items-center">
                           <div className="text-sm text-muted-foreground">
-                            Farmer: {farmerProfile?.full_name} | {farmerProfile?.phone}
+                            Farmer Load Request
                           </div>
                           <Button 
                             variant="default" 

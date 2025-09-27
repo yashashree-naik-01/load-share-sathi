@@ -1,57 +1,75 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Truck, ArrowLeft } from "lucide-react";
+import { Truck, ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signIn, user, profile, loading: authLoading } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Get stored user data (in real app, this would be API call)
-    const storedUser = localStorage.getItem('rurallink_user');
-    
-    if (!storedUser) {
+    if (!formData.email || !formData.password) {
       toast({
-        title: "Account not found",
-        description: "Please register first or check your credentials.",
+        title: "Missing Information",
+        description: "Please fill in all fields.",
         variant: "destructive"
       });
       return;
     }
 
-    const userData = JSON.parse(storedUser);
-    
-    if (userData.email === formData.email && userData.password === formData.password) {
+    setLoading(true);
+
+    try {
+      const { error } = await signIn(formData.email, formData.password);
+
+      if (error) {
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
       toast({
         title: "Login Successful!",
-        description: `Welcome back, ${userData.name}!`
+        description: "Welcome back!"
       });
-      
-      // Navigate to appropriate dashboard
-      navigate(userData.type === 'farmer' ? '/farmer-dashboard' : '/truck-dashboard');
-    } else {
+    } catch (error: any) {
       toast({
-        title: "Invalid Credentials",
-        description: "Please check your email and password.",
+        title: "Login Failed",
+        description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   const updateFormData = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Redirect based on user type after login
+  useEffect(() => {
+    if (user && profile && !authLoading) {
+      const dashboardPath = profile.user_type === 'farmer' ? '/farmer-dashboard' : '/truck-dashboard';
+      navigate(dashboardPath);
+    }
+  }, [user, profile, authLoading, navigate]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -98,8 +116,15 @@ const Login = () => {
               />
             </div>
 
-            <Button type="submit" className="w-full" variant="default">
-              Login
+            <Button type="submit" className="w-full" variant="default" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging in...
+                </>
+              ) : (
+                'Login'
+              )}
             </Button>
           </form>
           
@@ -110,14 +135,6 @@ const Login = () => {
             </Button>
           </div>
 
-          {/* Demo credentials */}
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="text-sm font-medium text-muted-foreground mb-2">Demo Credentials:</p>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <p>Farmer: farmer@demo.com / password123</p>
-              <p>Truck Owner: truck@demo.com / password123</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

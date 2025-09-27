@@ -81,7 +81,7 @@ const Register = () => {
 
       toast({
         title: "Registration Successful!",
-        description: `Welcome to RuralLink, ${formData.name}! Please check your email to confirm your account.`
+        description: `Welcome to SmartLoad, ${formData.name}! Please check your email to confirm your account.`
       });
 
       // Navigate to appropriate dashboard
@@ -121,7 +121,7 @@ const Register = () => {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Home
             </Button>
-            <h1 className="text-4xl font-bold text-foreground mb-4">Join RuralLink</h1>
+            <h1 className="text-4xl font-bold text-foreground mb-4">Join SmartLoad</h1>
             <p className="text-muted-foreground">Choose your account type to get started</p>
           </div>
           

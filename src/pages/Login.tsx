@@ -87,7 +87,7 @@ const Login = () => {
           </div>
           <CardTitle className="text-primary">Welcome Back</CardTitle>
           <CardDescription>
-            Login to your RuralLink account
+            Login to your SmartLoad account
           </CardDescription>
         </CardHeader>
         <CardContent>

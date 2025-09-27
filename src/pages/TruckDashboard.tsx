@@ -167,7 +167,7 @@ const TruckDashboard = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Truck className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold text-primary">RuralLink</span>
+              <span className="text-2xl font-bold text-primary">SmartLoad</span>
             </div>
             <span className="text-muted-foreground">Truck Owner Dashboard</span>
           </div>

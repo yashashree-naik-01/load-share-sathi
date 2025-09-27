@@ -13,7 +13,7 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Truck className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">RuralLink</span>
+            <span className="text-2xl font-bold text-primary">SmartLoad</span>
           </div>
           <div className="flex space-x-4">
             <Button variant="ghost" onClick={() => navigate('/login')}>Login</Button>
@@ -26,13 +26,13 @@ const Index = () => {
       <section className="py-20 px-4 bg-gradient-hero">
         <div className="container mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-bold text-primary-foreground mb-6">
-            Connecting Rural India
+          Smart Logistics. Zero Empty Miles.	
             <br />
-            <span className="text-accent">One Load at a Time</span>
+            <span className="text-accent"></span>
           </h1>
           <p className="text-xl text-primary-foreground/80 mb-8 max-w-3xl mx-auto">
             AI-powered platform that matches farmers' transport needs with truck owners, 
-            reducing empty trips and making rural logistics more efficient and affordable.
+            reducing empty trips and making logistics more efficient and affordable.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
@@ -85,7 +85,7 @@ const Index = () => {
                     <span className="text-destructive-foreground text-sm">!</span>
                   </div>
                   <p className="text-muted-foreground">
-                    Inefficient logistics increase costs for rural communities
+                    Inefficient logistics increase costs for community
                   </p>
                 </div>
               </div>
@@ -110,7 +110,7 @@ const Index = () => {
                 <div className="flex items-start space-x-3">
                   <CheckCircle className="w-6 h-6 text-primary mt-1" />
                   <p className="text-muted-foreground">
-                    Cost-effective transport solutions for rural communities
+                    Cost-effective transport solutions for communities
                   </p>
                 </div>
               </div>
@@ -123,7 +123,7 @@ const Index = () => {
       <section className="py-16 px-4 bg-muted/30">
         <div className="container mx-auto">
           <h2 className="text-4xl font-bold text-center text-foreground mb-12">
-            How RuralLink Works
+            How SmartLoad Works
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <Card className="text-center shadow-soft">
@@ -193,7 +193,7 @@ const Index = () => {
       <section className="py-16 px-4 bg-gradient-trust">
         <div className="container mx-auto text-center">
           <h2 className="text-4xl font-bold text-trust-foreground mb-6">
-            Ready to Transform Rural Transport?
+            Ready to Transform Logistics?
           </h2>
           <p className="text-xl text-trust-foreground/80 mb-8 max-w-2xl mx-auto">
             Join thousands of farmers and truck owners already saving money and reducing waste.
@@ -216,10 +216,10 @@ const Index = () => {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <Truck className="h-6 w-6 text-primary" />
-                <span className="text-xl font-bold text-primary">RuralLink</span>
+                <span className="text-xl font-bold text-primary">SmartLoad</span>
               </div>
               <p className="text-muted-foreground">
-                Connecting rural India through smart transport solutions.
+                Connecting India through smart transport solutions.
               </p>
             </div>
             <div>
@@ -248,7 +248,7 @@ const Index = () => {
             </div>
           </div>
           <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 RuralLink. Made with ❤️ for Rural India.</p>
+            <p>&copy; 2024 SmartLoad. Made with ❤️ for India.</p>
           </div>
         </div>
       </footer>

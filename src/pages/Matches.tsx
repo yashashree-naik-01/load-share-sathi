@@ -7,6 +7,8 @@ import { Truck, ArrowLeft, MapPin, Weight, IndianRupee, Star, Phone, User, Route
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase, type FarmerLoad, type TruckRoute, type Profile } from "@/hooks/useSupabase";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useLocation } from "react-router-dom";
 
 interface TruckMatch {
   id: string;
@@ -27,11 +29,13 @@ interface TruckMatch {
 const Matches = () => {
   const { loadId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { farmerLoads, truckRoutes, profiles, loading, createBooking, updateLoadStatus, updateTruckRouteStatus } = useSupabase();
   const { user, profile, loading: authLoading } = useAuth();
   const [load, setLoad] = useState<FarmerLoad | null>(null);
   const [matches, setMatches] = useState<TruckMatch[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     // Redirect if not authenticated
@@ -58,9 +62,37 @@ const Matches = () => {
     
     setLoad(currentLoad);
     
-    // Generate AI matches (in real app, this would be an API call)
-    generateMatches(currentLoad);
-  }, [loadId, navigate, loading, authLoading, farmerLoads, truckRoutes, profiles, user, profile]);
+    // Check if AI matches were passed from previous page
+    if (location.state?.aiMatches) {
+      setMatches(location.state.aiMatches);
+    } else {
+      // Call AI matching engine
+      getAIMatches(currentLoad);
+    }
+  }, [loadId, navigate, loading, authLoading, farmerLoads, truckRoutes, profiles, user, profile, location.state]);
+
+  const getAIMatches = async (currentLoad: FarmerLoad) => {
+    try {
+      setAiLoading(true);
+      const { data, error } = await supabase.functions.invoke('ai-matching-engine', {
+        body: { loadId: currentLoad.id }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.matches) {
+        setMatches(data.matches);
+      } else {
+        // Fallback to local matching
+        generateMatches(currentLoad);
+      }
+    } catch (error) {
+      console.error('Error getting AI matches:', error);
+      generateMatches(currentLoad);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const generateMatches = (currentLoad: FarmerLoad) => {
     // AI matching engine using real truck data
@@ -190,10 +222,15 @@ const Matches = () => {
     return 'Fair Match';
   };
 
-  if (loading || authLoading) {
+  if (loading || authLoading || aiLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">
+            {aiLoading ? 'AI is finding the best matches for your load...' : 'Loading...'}
+          </p>
+        </div>
       </div>
     );
   }
@@ -348,13 +385,29 @@ const Matches = () => {
                       variant="default" 
                       onClick={() => bookTruck(truck)}
                       className="flex-1"
+                      disabled={load?.status !== 'pending'}
                     >
-                      Book This Truck
+                      {load?.status === 'booked' ? 'Already Booked' : 'Book This Truck'}
                     </Button>
-                    <Button variant="outline">
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        window.open(`tel:${truck.ownerPhone}`, '_self');
+                      }}
+                    >
+                      <Phone className="h-4 w-4 mr-2" />
                       Contact Driver
                     </Button>
-                    <Button variant="ghost">
+                    <Button 
+                      variant="ghost"
+                      onClick={() => {
+                        toast({
+                          title: "Driver Details",
+                          description: `${truck.ownerName} - ${truck.vehicleType} - Rating: ${truck.rating}/5`
+                        });
+                      }}
+                    >
+                      <User className="h-4 w-4 mr-2" />
                       View Details
                     </Button>
                   </div>

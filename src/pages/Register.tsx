@@ -55,6 +55,16 @@ const Register = () => {
       return;
     }
 
+    // Validate phone number
+    if (formData.phone.length !== 10) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Phone number must be exactly 10 digits.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -62,10 +72,7 @@ const Register = () => {
         name: formData.name,
         phone: formData.phone,
         type: selectedType,
-        farmLocation: formData.farmLocation,
-        vehicleType: formData.vehicleType,
-        capacity: formData.capacity,
-        licenseNumber: formData.licenseNumber
+        farmLocation: formData.farmLocation
       };
 
       const { error } = await signUp(formData.email, formData.password, userData);
@@ -151,7 +158,7 @@ const Register = () => {
 
             <Card 
               className="cursor-pointer hover:shadow-soft transition-all border-2 hover:border-secondary"
-              onClick={() => setSelectedType('truck')}
+              onClick={() => setSelectedType('truck_owner')}
             >
               <CardHeader className="text-center">
                 <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -242,12 +249,17 @@ const Register = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number *</Label>
+              <Label htmlFor="phone">Phone Number (10 digits) *</Label>
               <Input
                 id="phone"
                 value={formData.phone}
-                onChange={(e) => updateFormData('phone', e.target.value)}
-                placeholder="+91 98765 43210"
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  updateFormData('phone', value);
+                }}
+                placeholder="Enter 10-digit phone number"
+                maxLength={10}
+                pattern="[0-9]{10}"
                 required
               />
             </div>
@@ -269,43 +281,6 @@ const Register = () => {
               </div>
             )}
 
-            {selectedType === 'truck' && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="vehicleType">Vehicle Type</Label>
-                  <Select onValueChange={(value) => updateFormData('vehicleType', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select vehicle type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vehicleTypes.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="capacity">Capacity (in MT)</Label>
-                  <Input
-                    id="capacity"
-                    value={formData.capacity}
-                    onChange={(e) => updateFormData('capacity', e.target.value)}
-                    placeholder="e.g., 7.5"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="licenseNumber">Driving License Number</Label>
-                  <Input
-                    id="licenseNumber"
-                    value={formData.licenseNumber}
-                    onChange={(e) => updateFormData('licenseNumber', e.target.value)}
-                    placeholder="Enter license number"
-                  />
-                </div>
-              </>
-            )}
 
             <Button 
               type="submit" 

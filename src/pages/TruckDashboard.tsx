@@ -9,6 +9,7 @@ import { Truck, Plus, Route, MapPin, Calendar, Weight, IndianRupee, LogOut, Sear
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase, type TruckRoute, type FarmerLoad, type Profile } from "@/hooks/useSupabase";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const TruckDashboard = () => {
   const navigate = useNavigate();
@@ -110,31 +111,58 @@ const TruckDashboard = () => {
     navigate('/');
   };
 
-  const acceptLoad = (load: FarmerLoad) => {
-    toast({
-      title: "Load Request Accepted!",
-      description: `You've accepted a load request. Contact details will be shared.`
-    });
-    
-    // In a real app, this would notify the farmer and create a booking
-    console.log('Accepted load:', load);
+  const acceptLoad = async (load: FarmerLoad) => {
+    try {
+      // Use the new booking system
+      const { data, error } = await supabase.functions.invoke('create-booking', {
+        body: { 
+          loadId: load.id,
+          truckOwnerId: profile?.id
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Load Request Accepted!",
+        description: `You've accepted the load. Farmer will be notified for confirmation.`
+      });
+      
+      // Refresh data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error accepting load:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept load. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const calculateDistance = (from: string, to: string) => {
-    // Simplified distance calculation for demo
+    const fromCity = from.split(',')[0];
+    const toCity = to.split(',')[0];
+    
+    // Static distances for major Indian city pairs (in km)
     const distances: { [key: string]: number } = {
-      'Mumbai-Delhi': 1400,
-      'Mumbai-Pune': 150,
-      'Delhi-Jaipur': 280,
-      'Pune-Nashik': 200,
-      'Mumbai-Ahmedabad': 530,
-      // Add more route distances as needed
+      'Mumbai-Delhi': 1400, 'Delhi-Mumbai': 1400,
+      'Mumbai-Pune': 150, 'Pune-Mumbai': 150,
+      'Delhi-Jaipur': 280, 'Jaipur-Delhi': 280,
+      'Pune-Nashik': 200, 'Nashik-Pune': 200,
+      'Mumbai-Ahmedabad': 530, 'Ahmedabad-Mumbai': 530,
+      'Mumbai-Surat': 280, 'Surat-Mumbai': 280,
+      'Delhi-Agra': 230, 'Agra-Delhi': 230,
+      'Mumbai-Nagpur': 820, 'Nagpur-Mumbai': 820,
+      'Delhi-Lucknow': 550, 'Lucknow-Delhi': 550,
+      'Pune-Indore': 540, 'Indore-Pune': 540,
+      'Mumbai-Coimbatore': 920, 'Coimbatore-Mumbai': 920,
+      'Delhi-Kanpur': 460, 'Kanpur-Delhi': 460,
+      'Pune-Bhopal': 590, 'Bhopal-Pune': 590
     };
     
-    const key = `${from.split(',')[0]}-${to.split(',')[0]}`;
-    const reverseKey = `${to.split(',')[0]}-${from.split(',')[0]}`;
-    
-    return distances[key] || distances[reverseKey] || Math.floor(Math.random() * 800) + 200;
+    const key = `${fromCity}-${toCity}`;
+    return distances[key] || 450; // Default distance if not found
   };
 
   const isRouteCompatible = (route: TruckRoute, load: FarmerLoad) => {
@@ -156,8 +184,55 @@ const TruckDashboard = () => {
   }
 
   // Get truck owner's routes and available loads
-  const userRoutes = truckRoutes.filter(route => route.truck_owner_id === profile.id);
+  const userRoutes = truckRoutes.filter(route => route.truck_owner_id === profile?.id);
   const availableLoads = farmerLoads.filter(load => load.status === 'pending');
+  
+  // Get compatible loads using AI analysis
+  const getCompatibleLoads = () => {
+    if (userRoutes.length === 0) return [];
+    
+    const compatibleLoads = [];
+    for (const load of availableLoads) {
+      const distance = calculateDistance(load.pickup_location, load.destination);
+      const isCompatible = userRoutes.some(route => 
+        route.capacity >= load.quantity && 
+        (route.start_location.toLowerCase().includes(load.pickup_location.split(',')[0].toLowerCase()) ||
+         route.end_location.toLowerCase().includes(load.destination.split(',')[0].toLowerCase()))
+      );
+      
+      if (isCompatible) {
+        const compatibleRoute = userRoutes.find(route => 
+          route.capacity >= load.quantity && 
+          (route.start_location.toLowerCase().includes(load.pickup_location.split(',')[0].toLowerCase()) ||
+           route.end_location.toLowerCase().includes(load.destination.split(',')[0].toLowerCase()))
+        );
+        
+        if (compatibleRoute) {
+          const estimatedCost = Math.round(distance * compatibleRoute.price_per_km);
+          const profitMargin = load.estimated_price ? 
+            ((load.estimated_price - estimatedCost) / load.estimated_price * 100) : 0;
+          
+          compatibleLoads.push({
+            ...load,
+            distance,
+            estimatedCost,
+            profitMargin,
+            compatibleRoute: compatibleRoute.id
+          });
+        }
+      }
+    }
+    
+    return compatibleLoads.sort((a, b) => b.profitMargin - a.profitMargin);
+  };
+  
+  const [compatibleLoads, setCompatibleLoads] = useState<any[]>([]);
+  
+  useEffect(() => {
+    if (!loading && userRoutes.length > 0 && availableLoads.length > 0) {
+      setCompatibleLoads(getCompatibleLoads());
+    }
+  }, [userRoutes, availableLoads, loading]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -289,6 +364,80 @@ const TruckDashboard = () => {
               </form>
             </CardContent>
           </Card>
+        )}
+
+        {/* Compatible Loads Section */}
+        {compatibleLoads.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-foreground mb-4">Compatible Loads (AI Recommended)</h2>
+            <div className="grid gap-4">
+              {compatibleLoads.slice(0, 3).map(load => (
+                <Card key={load.id} className="shadow-soft border-primary border-2">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-primary">{load.crop_type}</CardTitle>
+                        <CardDescription className="flex items-center space-x-4 mt-2">
+                          <span className="flex items-center">
+                            <Weight className="h-4 w-4 mr-1" />
+                            {load.quantity} {load.unit}
+                          </span>
+                          <span className="flex items-center">
+                            <IndianRupee className="h-4 w-4 mr-1" />
+                            ₹{load.estimated_price || 'Negotiable'}
+                          </span>
+                        </CardDescription>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-primary">₹{load.estimatedCost.toLocaleString()}</div>
+                        <div className="text-sm text-muted-foreground">Estimated Cost</div>
+                        {load.profitMargin > 0 && (
+                          <div className="text-sm text-green-600">+{load.profitMargin.toFixed(1)}% profit</div>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="flex items-center text-muted-foreground">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        <span>From: {load.pickup_location}</span>
+                      </div>
+                      <div className="flex items-center text-muted-foreground">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        <span>To: {load.destination}</span>
+                      </div>
+                      <div className="flex items-center text-muted-foreground">
+                        <Route className="h-4 w-4 mr-2" />
+                        <span>Distance: {load.distance} km</span>
+                      </div>
+                      <div className="flex items-center text-muted-foreground">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span>Pickup: {new Date(load.pickup_date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-muted/50 rounded-lg p-3 mb-4">
+                      <p className="text-sm text-muted-foreground">
+                        <strong>AI Analysis:</strong> High compatibility with your route. 
+                        Estimated revenue: ₹{load.estimated_price?.toLocaleString() || 'TBD'} | 
+                        Your cost: ₹{load.estimatedCost.toLocaleString()} | 
+                        Distance: {load.distance}km
+                      </p>
+                    </div>
+                    
+                    <Button 
+                      variant="truck" 
+                      onClick={() => acceptLoad(load)}
+                      className="w-full"
+                    >
+                      Accept This Load
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         )}
 
         <div className="grid lg:grid-cols-2 gap-8">

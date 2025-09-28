@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Truck, Plus, Package, MapPin, Calendar, Weight, IndianRupee, LogOut, Loader2, Search } from "lucide-react";
+import { Truck, Plus, Package, MapPin, Calendar, Weight, IndianRupee, LogOut, Loader2, Search, Phone, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase, type FarmerLoad } from "@/hooks/useSupabase";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const FarmerDashboard = () => {
   const navigate = useNavigate();
@@ -113,8 +114,20 @@ const FarmerDashboard = () => {
     navigate('/');
   };
 
-  const viewMatches = (loadId: string) => {
-    navigate(`/matches/${loadId}`);
+  const viewMatches = async (loadId: string) => {
+    try {
+      // Call AI matching engine
+      const { data, error } = await supabase.functions.invoke('ai-matching-engine', {
+        body: { loadId }
+      });
+      
+      if (error) throw error;
+      
+      navigate(`/matches/${loadId}`, { state: { aiMatches: data.matches } });
+    } catch (error) {
+      console.error('Error getting AI matches:', error);
+      navigate(`/matches/${loadId}`);
+    }
   };
 
   if (loading) {
@@ -342,8 +355,9 @@ const FarmerDashboard = () => {
                       variant="default" 
                       size="sm"
                       onClick={() => viewMatches(load.id)}
+                      disabled={load.status === 'booked' || load.status === 'completed'}
                     >
-                      View Matches
+                      {load.status === 'booked' ? 'Booked' : load.status === 'completed' ? 'Completed' : 'View Matches'}
                     </Button>
                   </div>
                 </CardContent>
@@ -374,7 +388,7 @@ const FarmerDashboard = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div className="flex items-center text-muted-foreground">
                         <Calendar className="h-4 w-4 mr-2" />
                         <span>Booked: {new Date(booking.booking_date).toLocaleDateString()}</span>
@@ -391,6 +405,17 @@ const FarmerDashboard = () => {
                           <span>Completed: {new Date(booking.completion_date).toLocaleDateString()}</span>
                         </div>
                       )}
+                    </div>
+                    
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm">
+                        <Phone className="h-4 w-4 mr-2" />
+                        Contact Driver
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        <User className="h-4 w-4 mr-2" />
+                        View Details
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

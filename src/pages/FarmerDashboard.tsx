@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 const FarmerDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { farmerLoads, bookings, loading, createFarmerLoad, acceptBooking, rejectBooking } = useSupabase();
+  const { farmerLoads, truckRoutes, profiles, bookings, loading, createFarmerLoad, acceptBooking, rejectBooking } = useSupabase();
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const [showPostForm, setShowPostForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -466,11 +466,38 @@ const FarmerDashboard = () => {
                       {/* Show normal action buttons for confirmed bookings */}
                       {booking.status === 'confirmed' && (
                         <>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              const truckRoute = truckRoutes.find(r => r.id === booking.truck_route_id);
+                              const truckOwner = profiles.find(p => p.id === truckRoute?.truck_owner_id);
+                              if (truckOwner?.phone) {
+                                window.open(`tel:${truckOwner.phone}`, '_self');
+                              } else {
+                                toast({
+                                  title: "Contact Info Not Available",
+                                  description: "Driver's phone number is not available.",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                          >
                             <Phone className="h-4 w-4 mr-2" />
                             Contact Driver
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              const truckRoute = truckRoutes.find(r => r.id === booking.truck_route_id);
+                              const truckOwner = profiles.find(p => p.id === truckRoute?.truck_owner_id);
+                              toast({
+                                title: "Driver Details",
+                                description: `Name: ${truckOwner?.full_name || 'Unknown'}\nVehicle: ${truckRoute?.vehicle_type || 'Unknown'}\nCapacity: ${truckRoute?.capacity || 0} ${truckRoute?.capacity_unit || 'kg'}\nPhone: ${truckOwner?.phone || 'Not available'}`
+                              });
+                            }}
+                          >
                             <User className="h-4 w-4 mr-2" />
                             View Details
                           </Button>

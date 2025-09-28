@@ -174,10 +174,11 @@ const Matches = () => {
       console.log('Starting booking process...', { loadId: load.id, truckId: truck.id });
       
       const truckRoute = truckRoutes.find(r => r.id === truck.id);
-      const truckOwner = profiles.find(p => p.full_name === truck.ownerName);
+      const truckOwner = profiles.find(p => p.id === truckRoute?.truck_owner_id);
       
       console.log('Found truck route:', truckRoute);
       console.log('Found truck owner:', truckOwner);
+      console.log('Available profiles:', profiles.map(p => ({ id: p.id, name: p.full_name, type: p.user_type })));
       
       if (!truckRoute || !truckOwner) {
         throw new Error('Truck or owner not found');

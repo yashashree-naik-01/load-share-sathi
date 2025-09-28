@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Truck, Plus, Package, MapPin, Calendar, Weight, IndianRupee, LogOut, Loader2, Search, Phone, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase, type FarmerLoad } from "@/hooks/useSupabase";
@@ -15,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 const FarmerDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { farmerLoads, bookings, loading, createFarmerLoad } = useSupabase();
+  const { farmerLoads, bookings, loading, createFarmerLoad, acceptBooking, rejectBooking } = useSupabase();
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const [showPostForm, setShowPostForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -112,6 +113,40 @@ const FarmerDashboard = () => {
   const handleLogout = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const handleAcceptBooking = async (bookingId: string) => {
+    try {
+      await acceptBooking(bookingId, 'farmer');
+      toast({
+        title: "Booking Accepted!",
+        description: "You've accepted the booking request. The truck owner will be notified."
+      });
+    } catch (error) {
+      console.error('Error accepting booking:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept booking. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRejectBooking = async (bookingId: string) => {
+    try {
+      await rejectBooking(bookingId);
+      toast({
+        title: "Booking Rejected",
+        description: "You've rejected the booking request."
+      });
+    } catch (error) {
+      console.error('Error rejecting booking:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject booking. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const viewMatches = async (loadId: string) => {
@@ -408,14 +443,47 @@ const FarmerDashboard = () => {
                     </div>
                     
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">
-                        <Phone className="h-4 w-4 mr-2" />
-                        Contact Driver
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <User className="h-4 w-4 mr-2" />
-                        View Details
-                      </Button>
+                      {/* Show accept/reject buttons for pending truck acceptance */}
+                      {booking.status === 'pending_farmer_acceptance' && booking.initiator_type === 'truck_owner' && (
+                        <>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => handleAcceptBooking(booking.id)}
+                          >
+                            Accept Request
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => handleRejectBooking(booking.id)}
+                          >
+                            Reject Request
+                          </Button>
+                        </>
+                      )}
+                      
+                      {/* Show normal action buttons for confirmed bookings */}
+                      {booking.status === 'confirmed' && (
+                        <>
+                          <Button variant="outline" size="sm">
+                            <Phone className="h-4 w-4 mr-2" />
+                            Contact Driver
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <User className="h-4 w-4 mr-2" />
+                            View Details
+                          </Button>
+                        </>
+                      )}
+                      
+                      {/* Show status for other states */}
+                      {booking.status === 'pending_truck_acceptance' && (
+                        <Badge variant="secondary">Waiting for truck owner response</Badge>
+                      )}
+                      {booking.status === 'rejected' && (
+                        <Badge variant="destructive">Request Rejected</Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

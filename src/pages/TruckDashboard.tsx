@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Truck, Plus, Route, MapPin, Calendar, Weight, IndianRupee, LogOut, Search, Loader2, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase, type TruckRoute, type FarmerLoad, type Profile } from "@/hooks/useSupabase";
@@ -14,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 const TruckDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { truckRoutes, farmerLoads, bookings, loading, createTruckRoute } = useSupabase();
+  const { truckRoutes, farmerLoads, bookings, loading, createTruckRoute, createBooking, acceptBooking, rejectBooking } = useSupabase();
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const [showRouteForm, setShowRouteForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -187,30 +188,82 @@ const TruckDashboard = () => {
     navigate('/');
   };
 
-  const acceptLoad = async (load: FarmerLoad) => {
+  const sendBookingRequest = async (load: FarmerLoad) => {
     try {
-      // Use the new booking system
-      const { data, error } = await supabase.functions.invoke('create-booking', {
-        body: { 
-          loadId: load.id,
-          truckOwnerId: profile?.id
-        }
-      });
+      // Find a compatible route for this truck owner
+      const compatibleRoute = truckRoutes.find(route => 
+        route.truck_owner_id === profile?.id && 
+        isRouteCompatible(route, load)
+      );
       
-      if (error) throw error;
+      if (!compatibleRoute) {
+        toast({
+          title: "No Compatible Route",
+          description: "You need to add a compatible route first to send booking requests.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Calculate estimated cost
+      const estimatedCost = compatibleRoute.price_per_km * calculateDistance(load.pickup_location, load.destination);
+      
+      // Create booking request
+      await createBooking({
+        farmer_load_id: load.id,
+        truck_route_id: compatibleRoute.id,
+        farmer_id: load.farmer_id,
+        truck_owner_id: profile.id,
+        total_price: estimatedCost,
+        distance_km: calculateDistance(load.pickup_location, load.destination),
+        status: 'pending_farmer_acceptance',
+        initiator_type: 'truck_owner'
+      });
       
       toast({
-        title: "Load Request Accepted!",
-        description: `You've accepted the load. Farmer will be notified for confirmation.`
+        title: "Booking Request Sent!",
+        description: `Your booking request has been sent to the farmer. They will be notified to accept or reject.`
       });
       
-      // Refresh data
-      window.location.reload();
     } catch (error) {
-      console.error('Error accepting load:', error);
+      console.error('Error sending booking request:', error);
       toast({
         title: "Error",
-        description: "Failed to accept load. Please try again.",
+        description: "Failed to send booking request. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAcceptBooking = async (bookingId: string) => {
+    try {
+      await acceptBooking(bookingId, 'truck_owner');
+      toast({
+        title: "Booking Accepted!",
+        description: "You've accepted the booking request. The farmer will be notified."
+      });
+    } catch (error) {
+      console.error('Error accepting booking:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept booking. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRejectBooking = async (bookingId: string) => {
+    try {
+      await rejectBooking(bookingId);
+      toast({
+        title: "Booking Rejected",
+        description: "You've rejected the booking request."
+      });
+    } catch (error) {
+      console.error('Error rejecting booking:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject booking. Please try again.",
         variant: "destructive"
       });
     }
@@ -234,7 +287,8 @@ const TruckDashboard = () => {
     );
   }
 
-  
+  // Get user's bookings
+  const userBookings = bookings.filter(booking => booking.truck_owner_id === profile.id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -430,10 +484,10 @@ const TruckDashboard = () => {
                     
                     <Button 
                       variant="truck" 
-                      onClick={() => acceptLoad(load)}
+                      onClick={() => sendBookingRequest(load)}
                       className="w-full"
                     >
-                      Accept This Load
+                      Send Booking Request
                     </Button>
                   </CardContent>
                 </Card>
@@ -579,9 +633,9 @@ const TruckDashboard = () => {
                           <Button 
                             variant="default" 
                             size="sm"
-                            onClick={() => acceptLoad(load)}
+                            onClick={() => sendBookingRequest(load)}
                           >
-                            Accept Load
+                            Send Booking Request
                           </Button>
                         </div>
                       </CardContent>
@@ -592,6 +646,96 @@ const TruckDashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Bookings Section */}
+        {userBookings.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-foreground mb-6">My Bookings</h2>
+            <div className="grid gap-6">
+              {userBookings.map((booking) => (
+                <Card key={booking.id} className="shadow-soft border-secondary border-2">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-secondary">Booking #{booking.id.slice(0, 8)}</CardTitle>
+                        <CardDescription>
+                          Status: <span className="capitalize font-medium">{booking.status.replace('_', ' ')}</span>
+                        </CardDescription>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-foreground">₹{booking.total_price.toLocaleString()}</div>
+                        <div className="text-sm text-muted-foreground">Total Revenue</div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="flex items-center text-muted-foreground">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span>Booked: {new Date(booking.booking_date).toLocaleDateString()}</span>
+                      </div>
+                      {booking.distance_km && (
+                        <div className="flex items-center text-muted-foreground">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          <span>Distance: {booking.distance_km} km</span>
+                        </div>
+                      )}
+                      {booking.completion_date && (
+                        <div className="flex items-center text-muted-foreground">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          <span>Completed: {new Date(booking.completion_date).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex space-x-2">
+                      {/* Show accept/reject buttons for pending truck acceptance */}
+                      {booking.status === 'pending_truck_acceptance' && booking.initiator_type === 'farmer' && (
+                        <>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => handleAcceptBooking(booking.id)}
+                          >
+                            Accept Request
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => handleRejectBooking(booking.id)}
+                          >
+                            Reject Request
+                          </Button>
+                        </>
+                      )}
+                      
+                      {/* Show normal action buttons for confirmed bookings */}
+                      {booking.status === 'confirmed' && (
+                        <>
+                          <Button variant="outline" size="sm">
+                            <Package className="h-4 w-4 mr-2" />
+                            Contact Farmer
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            View Details
+                          </Button>
+                        </>
+                      )}
+                      
+                      {/* Show status for other states */}
+                      {booking.status === 'pending_farmer_acceptance' && (
+                        <Badge variant="secondary">Waiting for farmer response</Badge>
+                      )}
+                      {booking.status === 'rejected' && (
+                        <Badge variant="destructive">Request Rejected</Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

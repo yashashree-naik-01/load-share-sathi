@@ -186,7 +186,8 @@ const Matches = () => {
         truck_owner_id: truckOwner.id,
         total_price: truck.estimatedCost,
         distance_km: truck.distance,
-        status: 'pending'
+        status: 'pending_truck_acceptance',
+        initiator_type: 'farmer'
       });
 
       // Update load status to booked

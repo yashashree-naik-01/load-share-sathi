@@ -52,11 +52,12 @@ export interface Booking {
   truck_owner_id: string;
   total_price: number;
   distance_km?: number;
-  status: 'pending' | 'confirmed' | 'in_transit' | 'completed' | 'cancelled';
+  status: 'pending_farmer_acceptance' | 'pending_truck_acceptance' | 'confirmed' | 'in_transit' | 'completed' | 'cancelled' | 'rejected';
   booking_date: string;
   completion_date?: string;
   created_at: string;
   updated_at: string;
+  initiator_type: 'farmer' | 'truck_owner';
 }
 
 export const useSupabase = () => {
@@ -135,6 +136,38 @@ export const useSupabase = () => {
     return data as Booking;
   };
 
+  const acceptBooking = async (bookingId: string, acceptorType: 'farmer' | 'truck_owner') => {
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ 
+        status: 'confirmed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', bookingId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    setBookings(prev => prev.map(booking => booking.id === bookingId ? data as Booking : booking));
+    return data as Booking;
+  };
+
+  const rejectBooking = async (bookingId: string) => {
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ 
+        status: 'rejected',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', bookingId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    setBookings(prev => prev.map(booking => booking.id === bookingId ? data as Booking : booking));
+    return data as Booking;
+  };
+
   const updateLoadStatus = async (loadId: string, status: FarmerLoad['status']) => {
     const { data, error } = await supabase
       .from('farmer_loads')
@@ -170,6 +203,8 @@ export const useSupabase = () => {
     createFarmerLoad,
     createTruckRoute,
     createBooking,
+    acceptBooking,
+    rejectBooking,
     updateLoadStatus,
     updateTruckRouteStatus,
     refetch: fetchData

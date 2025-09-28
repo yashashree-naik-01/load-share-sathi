@@ -23,6 +23,7 @@ export type Database = {
           farmer_id: string
           farmer_load_id: string
           id: string
+          initiator_type: string
           status: string
           total_price: number
           truck_owner_id: string
@@ -37,6 +38,7 @@ export type Database = {
           farmer_id: string
           farmer_load_id: string
           id?: string
+          initiator_type?: string
           status?: string
           total_price: number
           truck_owner_id: string
@@ -51,6 +53,7 @@ export type Database = {
           farmer_id?: string
           farmer_load_id?: string
           id?: string
+          initiator_type?: string
           status?: string
           total_price?: number
           truck_owner_id?: string

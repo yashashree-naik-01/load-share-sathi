@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 const FarmerDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { farmerLoads, truckRoutes, profiles, bookings, loading, createFarmerLoad, acceptBooking, rejectBooking } = useSupabase();
+  const { farmerLoads, truckRoutes, profiles, bookings, loading, createFarmerLoad, acceptBooking, rejectBooking, updateLoadStatus, refetch } = useSupabase();
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const [showPostForm, setShowPostForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -145,6 +145,23 @@ const FarmerDashboard = () => {
         title: "Error",
         description: "Failed to reject booking. Please try again.",
         variant: "destructive"
+      });
+    }
+  };
+
+  const handleCancelLoad = async (loadId: string) => {
+    try {
+      await updateLoadStatus(loadId, 'completed');
+      toast({
+        title: "Load Cancelled",
+        description: "Your load has been cancelled successfully.",
+      });
+      refetch();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to cancel load. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -398,6 +415,14 @@ const FarmerDashboard = () => {
                       disabled={load.status === 'booked' || load.status === 'completed'}
                     >
                       {load.status === 'booked' ? 'Booked' : load.status === 'completed' ? 'Completed' : 'View Matches'}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => handleCancelLoad(load.id)}
+                      disabled={load.status === 'booked' || load.status === 'completed'}
+                    >
+                      Cancel Load
                     </Button>
                   </div>
                 </CardContent>

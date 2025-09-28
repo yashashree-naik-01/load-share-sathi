@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 const TruckDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { truckRoutes, farmerLoads, profiles, bookings, loading, createTruckRoute, createBooking, acceptBooking, rejectBooking } = useSupabase();
+  const { truckRoutes, farmerLoads, profiles, bookings, loading, createTruckRoute, createBooking, acceptBooking, rejectBooking, updateTruckRouteStatus, refetch } = useSupabase();
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const [showRouteForm, setShowRouteForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -275,6 +275,23 @@ const TruckDashboard = () => {
         title: "Error",
         description: "Failed to reject booking. Please try again.",
         variant: "destructive"
+      });
+    }
+  };
+
+  const handleCancelRoute = async (routeId: string) => {
+    try {
+      await updateTruckRouteStatus(routeId, 'completed');
+      toast({
+        title: "Route Cancelled",
+        description: "Your route has been cancelled successfully.",
+      });
+      refetch();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to cancel route. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -550,7 +567,7 @@ const TruckDashboard = () => {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                     <CardContent>
                       <div className="space-y-2">
                         <div className="flex items-center text-muted-foreground">
                           <MapPin className="h-4 w-4 mr-2" />
@@ -564,6 +581,16 @@ const TruckDashboard = () => {
                           <Calendar className="h-4 w-4 mr-2" />
                           <span>Available: {new Date(route.available_date).toLocaleDateString()}</span>
                         </div>
+                      </div>
+                      <div className="mt-4">
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          onClick={() => handleCancelRoute(route.id)}
+                          disabled={route.status === 'booked' || route.status === 'completed'}
+                        >
+                          Cancel Route
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>

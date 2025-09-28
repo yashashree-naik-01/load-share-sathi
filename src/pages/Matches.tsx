@@ -195,7 +195,7 @@ const Matches = () => {
         truck_owner_id: truckOwner.id,
         total_price: truck.estimatedCost,
         distance_km: truck.distance,
-        status: 'pending' as const,
+        status: 'pending_truck_acceptance' as const,
         initiator_type: 'farmer' as const
       };
       

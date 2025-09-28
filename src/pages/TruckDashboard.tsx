@@ -54,8 +54,18 @@ const TruckDashboard = () => {
   }, [user, profile, authLoading, navigate]);
 
   // Get truck owner's routes and available loads
-  const userRoutes = truckRoutes.filter(route => route.truck_owner_id === profile?.id);
-  const availableLoads = farmerLoads.filter(load => load.status === 'pending');
+  const userRoutes = truckRoutes.filter(route => {
+    const hasConfirmedBooking = bookings.some(booking => 
+      booking.truck_route_id === route.id && booking.status === 'confirmed'
+    );
+    return route.truck_owner_id === profile?.id && !hasConfirmedBooking;
+  });
+  const availableLoads = farmerLoads.filter(load => {
+    const hasConfirmedBooking = bookings.some(booking => 
+      booking.farmer_load_id === load.id && booking.status === 'confirmed'
+    );
+    return load.status === 'pending' && !hasConfirmedBooking;
+  });
   
   // Static distance calculation for major Indian cities
   const calculateDistance = (from: string, to: string) => {

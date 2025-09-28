@@ -174,7 +174,12 @@ const FarmerDashboard = () => {
   }
 
   // Get farmer's loads and bookings
-  const userLoads = profile ? farmerLoads.filter(load => load.farmer_id === profile.id) : [];
+  const userLoads = profile ? farmerLoads.filter(load => {
+    const hasConfirmedBooking = bookings.some(booking => 
+      booking.farmer_load_id === load.id && booking.status === 'confirmed'
+    );
+    return load.farmer_id === profile.id && !hasConfirmedBooking;
+  }) : [];
   const userBookings = profile ? bookings.filter(booking => booking.farmer_id === profile.id) : [];
 
   return (

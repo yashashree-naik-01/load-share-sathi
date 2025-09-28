@@ -184,11 +184,14 @@ export type Database = {
         Row: {
           available_date: string
           available_time: string | null
+          booked_capacity: number | null
           capacity: number
           capacity_unit: string
           created_at: string
+          dl_number: string | null
           end_location: string
           id: string
+          number_plate: string | null
           price_per_km: number
           start_location: string
           status: string
@@ -199,11 +202,14 @@ export type Database = {
         Insert: {
           available_date: string
           available_time?: string | null
+          booked_capacity?: number | null
           capacity: number
           capacity_unit?: string
           created_at?: string
+          dl_number?: string | null
           end_location: string
           id?: string
+          number_plate?: string | null
           price_per_km: number
           start_location: string
           status?: string
@@ -214,11 +220,14 @@ export type Database = {
         Update: {
           available_date?: string
           available_time?: string | null
+          booked_capacity?: number | null
           capacity?: number
           capacity_unit?: string
           created_at?: string
+          dl_number?: string | null
           end_location?: string
           id?: string
+          number_plate?: string | null
           price_per_km?: number
           start_location?: string
           status?: string
@@ -241,7 +250,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_available_capacity: {
+        Args: { route_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

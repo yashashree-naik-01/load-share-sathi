@@ -24,7 +24,9 @@ const TruckDashboard = () => {
     availableDate: '',
     capacity: '',
     pricePerKm: '',
-    vehicleType: ''
+    vehicleType: '',
+    dlNumber: '',
+    numberPlate: ''
   });
   const [compatibleLoads, setCompatibleLoads] = useState<any[]>([]);
 
@@ -177,7 +179,9 @@ const TruckDashboard = () => {
         availableDate: '',
         capacity: '',
         pricePerKm: '',
-        vehicleType: ''
+        vehicleType: '',
+        dlNumber: '',
+        numberPlate: ''
       });
       setShowRouteForm(false);
     } catch (error) {
@@ -436,6 +440,28 @@ const TruckDashboard = () => {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="dlNumber">Driver License Number *</Label>
+                  <Input
+                    id="dlNumber"
+                    value={formData.dlNumber}
+                    onChange={(e) => updateFormData('dlNumber', e.target.value)}
+                    placeholder="e.g., MH1420110012345"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="numberPlate">Vehicle Number Plate *</Label>
+                  <Input
+                    id="numberPlate"
+                    value={formData.numberPlate}
+                    onChange={(e) => updateFormData('numberPlate', e.target.value)}
+                    placeholder="e.g., MH 14 AB 1234"
+                    required
+                  />
+                </div>
+
                 <div className="flex space-x-4 md:col-span-2">
                   <Button type="submit" variant="truck">
                     Post Route
@@ -587,7 +613,7 @@ const TruckDashboard = () => {
                           size="sm" 
                           variant="destructive"
                           onClick={() => handleCancelRoute(route.id)}
-                          disabled={route.status === 'booked' || route.status === 'completed'}
+                          disabled={route.status === 'completed'}
                         >
                           Cancel Route
                         </Button>

@@ -420,7 +420,7 @@ const FarmerDashboard = () => {
                       size="sm" 
                       variant="destructive"
                       onClick={() => handleCancelLoad(load.id)}
-                      disabled={load.status === 'booked' || load.status === 'completed'}
+                      disabled={load.status === 'completed'}
                     >
                       Cancel Load
                     </Button>

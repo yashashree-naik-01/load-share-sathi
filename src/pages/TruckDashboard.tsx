@@ -599,58 +599,154 @@ const TruckDashboard = () => {
                   </CardContent>
                 </Card>
               ) : (
-                userRoutes.map(route => (
-                  <Card key={route.id} className="shadow-soft">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-secondary">{route.vehicle_type || 'Truck'}</CardTitle>
-                        <CardDescription className="flex items-center space-x-4 mt-2">
-                          <span className="flex items-center">
-                            <Weight className="h-4 w-4 mr-1" />
-                            {route.capacity} {route.capacity_unit}
-                          </span>
-                          <span className="flex items-center">
-                            <IndianRupee className="h-4 w-4 mr-1" />
-                            ₹{route.price_per_km}/km
-                          </span>
-                        </CardDescription>
-                      </div>
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          route.status === 'available' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
-                        }`}>
-                          {route.status === 'available' ? 'Available' : 'Booked'}
+                userRoutes.map(route => {
+                  const routeBookings = bookings.filter(booking => 
+                    booking.truck_route_id === route.id && 
+                    (booking.status === 'confirmed' || booking.status === 'pending_farmer_acceptance' || booking.status === 'pending_truck_acceptance')
+                  );
+                  
+                  const usedCapacity = routeBookings.reduce((total, booking) => {
+                    const load = farmerLoads.find(l => l.id === booking.farmer_load_id);
+                    return total + (load ? load.quantity : 0);
+                  }, 0);
+                  
+                  const remainingCapacity = route.capacity - usedCapacity;
+                  const capacityPercentage = (usedCapacity / route.capacity) * 100;
+
+                  return (
+                    <Card key={route.id} className="shadow-soft">
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-secondary">{route.vehicle_type || 'Truck'}</CardTitle>
+                            <CardDescription className="flex items-center space-x-4 mt-2">
+                              <span className="flex items-center">
+                                <Weight className="h-4 w-4 mr-1" />
+                                {route.capacity} {route.capacity_unit} capacity
+                              </span>
+                              <span className="flex items-center">
+                                <IndianRupee className="h-4 w-4 mr-1" />
+                                ₹{route.price_per_km}/km
+                              </span>
+                            </CardDescription>
+                          </div>
+                          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            route.status === 'available' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+                          }`}>
+                            {route.status === 'available' ? 'Available' : 'Booked'}
+                          </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                     <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex items-center text-muted-foreground">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          <span>From: {route.start_location}</span>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center text-muted-foreground">
+                              <MapPin className="h-4 w-4 mr-2" />
+                              <span>From: {route.start_location}</span>
+                            </div>
+                            <div className="flex items-center text-muted-foreground">
+                              <MapPin className="h-4 w-4 mr-2" />
+                              <span>To: {route.end_location}</span>
+                            </div>
+                            <div className="flex items-center text-muted-foreground">
+                              <Calendar className="h-4 w-4 mr-2" />
+                              <span>Available: {new Date(route.available_date).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+
+                          {/* Load Status - Show based on capacity usage */}
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                {usedCapacity > 0 ? 'Moderate Load' : 'Available'}
+                              </span>
+                              <span className="font-medium">
+                                {usedCapacity}/{route.capacity} {route.capacity_unit}
+                              </span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full transition-all duration-300 ${
+                                  capacityPercentage < 50 ? 'bg-green-500' : 
+                                  capacityPercentage < 80 ? 'bg-orange-400' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${Math.min(capacityPercentage, 100)}%` }}
+                              />
+                            </div>
+                            <div className="text-sm text-success font-medium">
+                              {remainingCapacity} {route.capacity_unit} capacity remaining
+                            </div>
+                          </div>
+
+                          {/* Current Bookings */}
+                          {routeBookings.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="flex items-center text-foreground font-medium text-sm">
+                                <Package className="h-4 w-4 mr-2" />
+                                Current Bookings ({routeBookings.length})
+                              </div>
+                              {routeBookings.map(booking => {
+                                const load = farmerLoads.find(l => l.id === booking.farmer_load_id);
+                                const farmer = profiles.find(p => p.id === booking.farmer_id);
+                                
+                                return (
+                                  <div key={booking.id} className="flex justify-between items-center p-2 bg-muted rounded-lg">
+                                    <div className="space-y-1">
+                                      <div className="text-sm font-medium text-foreground">
+                                        {farmer?.full_name || 'Unknown Farmer'}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {load?.quantity} {load?.unit} - {load?.crop_type}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <Badge 
+                                        variant={booking.status === 'confirmed' ? 'secondary' : 'default'}
+                                        className="text-xs"
+                                      >
+                                        {booking.status.replace(/_/g, ' ')}
+                                      </Badge>
+                                      {booking.status === 'confirmed' && (
+                                        <Button 
+                                          variant="destructive" 
+                                          size="sm"
+                                          onClick={() => handleCancelBooking(booking.id)}
+                                          className="text-xs px-2 py-1 h-6"
+                                        >
+                                          Cancel
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Remaining Capacity Display */}
+                          <div className="text-right bg-muted/50 p-2 rounded">
+                            <div className="text-xs text-muted-foreground">Remaining Capacity</div>
+                            <div className="text-lg font-bold text-success">
+                              {remainingCapacity} {route.capacity_unit}
+                            </div>
+                          </div>
+
+                          <div className="mt-4">
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => handleCancelRoute(route.id)}
+                              disabled={route.status === 'completed'}
+                              className="w-full"
+                            >
+                              Cancel Route
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center text-muted-foreground">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          <span>To: {route.end_location}</span>
-                        </div>
-                        <div className="flex items-center text-muted-foreground">
-                          <Calendar className="h-4 w-4 mr-2" />
-                          <span>Available: {new Date(route.available_date).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      <div className="mt-4">
-                        <Button 
-                          size="sm" 
-                          variant="destructive"
-                          onClick={() => handleCancelRoute(route.id)}
-                          disabled={route.status === 'completed'}
-                        >
-                          Cancel Route
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                      </CardContent>
+                    </Card>
+                  );
+                })
               )}
             </div>
           </div>

@@ -52,6 +52,81 @@ const TruckDashboard = () => {
     }
   }, [user, profile, authLoading, navigate]);
 
+  // Get truck owner's routes and available loads
+  const userRoutes = truckRoutes.filter(route => route.truck_owner_id === profile?.id);
+  const availableLoads = farmerLoads.filter(load => load.status === 'pending');
+  
+  // Static distance calculation for major Indian cities
+  const calculateDistance = (from: string, to: string) => {
+    const fromCity = from.split(',')[0];
+    const toCity = to.split(',')[0];
+    
+    // Static distances for major Indian city pairs (in km)
+    const distances: { [key: string]: number } = {
+      'Mumbai-Delhi': 1400, 'Delhi-Mumbai': 1400,
+      'Mumbai-Pune': 150, 'Pune-Mumbai': 150,
+      'Delhi-Jaipur': 280, 'Jaipur-Delhi': 280,
+      'Pune-Nashik': 200, 'Nashik-Pune': 200,
+      'Mumbai-Ahmedabad': 530, 'Ahmedabad-Mumbai': 530,
+      'Mumbai-Surat': 280, 'Surat-Mumbai': 280,
+      'Delhi-Agra': 230, 'Agra-Delhi': 230,
+      'Mumbai-Nagpur': 820, 'Nagpur-Mumbai': 820,
+      'Delhi-Lucknow': 550, 'Lucknow-Delhi': 550,
+      'Pune-Indore': 540, 'Indore-Pune': 540,
+      'Mumbai-Coimbatore': 920, 'Coimbatore-Mumbai': 920,
+      'Delhi-Kanpur': 460, 'Kanpur-Delhi': 460,
+      'Pune-Bhopal': 590, 'Bhopal-Pune': 590
+    };
+    
+    const key = `${fromCity}-${toCity}`;
+    return distances[key] || 450; // Default distance if not found
+  };
+
+  // Get compatible loads using AI analysis
+  const getCompatibleLoads = () => {
+    if (userRoutes.length === 0) return [];
+    
+    const compatibleLoads = [];
+    for (const load of availableLoads) {
+      const distance = calculateDistance(load.pickup_location, load.destination);
+      const isCompatible = userRoutes.some(route => 
+        route.capacity >= load.quantity && 
+        (route.start_location.toLowerCase().includes(load.pickup_location.split(',')[0].toLowerCase()) ||
+         route.end_location.toLowerCase().includes(load.destination.split(',')[0].toLowerCase()))
+      );
+      
+      if (isCompatible) {
+        const compatibleRoute = userRoutes.find(route => 
+          route.capacity >= load.quantity && 
+          (route.start_location.toLowerCase().includes(load.pickup_location.split(',')[0].toLowerCase()) ||
+           route.end_location.toLowerCase().includes(load.destination.split(',')[0].toLowerCase()))
+        );
+        
+        if (compatibleRoute) {
+          const estimatedCost = Math.round(distance * compatibleRoute.price_per_km);
+          const profitMargin = load.estimated_price ? 
+            ((load.estimated_price - estimatedCost) / load.estimated_price * 100) : 0;
+          
+          compatibleLoads.push({
+            ...load,
+            distance,
+            estimatedCost,
+            profitMargin,
+            compatibleRoute: compatibleRoute.id
+          });
+        }
+      }
+    }
+    
+    return compatibleLoads.sort((a, b) => b.profitMargin - a.profitMargin);
+  };
+
+  useEffect(() => {
+    if (!loading && userRoutes.length > 0 && availableLoads.length > 0) {
+      setCompatibleLoads(getCompatibleLoads());
+    }
+  }, [userRoutes, availableLoads, loading]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -141,31 +216,6 @@ const TruckDashboard = () => {
     }
   };
 
-  const calculateDistance = (from: string, to: string) => {
-    const fromCity = from.split(',')[0];
-    const toCity = to.split(',')[0];
-    
-    // Static distances for major Indian city pairs (in km)
-    const distances: { [key: string]: number } = {
-      'Mumbai-Delhi': 1400, 'Delhi-Mumbai': 1400,
-      'Mumbai-Pune': 150, 'Pune-Mumbai': 150,
-      'Delhi-Jaipur': 280, 'Jaipur-Delhi': 280,
-      'Pune-Nashik': 200, 'Nashik-Pune': 200,
-      'Mumbai-Ahmedabad': 530, 'Ahmedabad-Mumbai': 530,
-      'Mumbai-Surat': 280, 'Surat-Mumbai': 280,
-      'Delhi-Agra': 230, 'Agra-Delhi': 230,
-      'Mumbai-Nagpur': 820, 'Nagpur-Mumbai': 820,
-      'Delhi-Lucknow': 550, 'Lucknow-Delhi': 550,
-      'Pune-Indore': 540, 'Indore-Pune': 540,
-      'Mumbai-Coimbatore': 920, 'Coimbatore-Mumbai': 920,
-      'Delhi-Kanpur': 460, 'Kanpur-Delhi': 460,
-      'Pune-Bhopal': 590, 'Bhopal-Pune': 590
-    };
-    
-    const key = `${fromCity}-${toCity}`;
-    return distances[key] || 450; // Default distance if not found
-  };
-
   const isRouteCompatible = (route: TruckRoute, load: FarmerLoad) => {
     const routeCapacity = route.capacity;
     const loadWeight = load.quantity;
@@ -185,54 +235,6 @@ const TruckDashboard = () => {
   }
 
   
-  // Get compatible loads using AI analysis
-  const getCompatibleLoads = () => {
-    if (userRoutes.length === 0) return [];
-    
-    const compatibleLoads = [];
-    for (const load of availableLoads) {
-      const distance = calculateDistance(load.pickup_location, load.destination);
-      const isCompatible = userRoutes.some(route => 
-        route.capacity >= load.quantity && 
-        (route.start_location.toLowerCase().includes(load.pickup_location.split(',')[0].toLowerCase()) ||
-         route.end_location.toLowerCase().includes(load.destination.split(',')[0].toLowerCase()))
-      );
-      
-      if (isCompatible) {
-        const compatibleRoute = userRoutes.find(route => 
-          route.capacity >= load.quantity && 
-          (route.start_location.toLowerCase().includes(load.pickup_location.split(',')[0].toLowerCase()) ||
-           route.end_location.toLowerCase().includes(load.destination.split(',')[0].toLowerCase()))
-        );
-        
-        if (compatibleRoute) {
-          const estimatedCost = Math.round(distance * compatibleRoute.price_per_km);
-          const profitMargin = load.estimated_price ? 
-            ((load.estimated_price - estimatedCost) / load.estimated_price * 100) : 0;
-          
-          compatibleLoads.push({
-            ...load,
-            distance,
-            estimatedCost,
-            profitMargin,
-            compatibleRoute: compatibleRoute.id
-          });
-        }
-      }
-    }
-    
-    return compatibleLoads.sort((a, b) => b.profitMargin - a.profitMargin);
-  };
-  
-  // Get truck owner's routes and available loads
-  const userRoutes = truckRoutes.filter(route => route.truck_owner_id === profile?.id);
-  const availableLoads = farmerLoads.filter(load => load.status === 'pending');
-  
-  useEffect(() => {
-    if (!loading && userRoutes.length > 0 && availableLoads.length > 0) {
-      setCompatibleLoads(getCompatibleLoads());
-    }
-  }, [userRoutes, availableLoads, loading]);
 
   return (
     <div className="min-h-screen bg-background">

@@ -171,24 +171,35 @@ const Matches = () => {
     if (!load || !profile) return;
     
     try {
+      console.log('Starting booking process...', { loadId: load.id, truckId: truck.id });
+      
       const truckRoute = truckRoutes.find(r => r.id === truck.id);
       const truckOwner = profiles.find(p => p.full_name === truck.ownerName);
+      
+      console.log('Found truck route:', truckRoute);
+      console.log('Found truck owner:', truckOwner);
       
       if (!truckRoute || !truckOwner) {
         throw new Error('Truck or owner not found');
       }
       
-      // Create booking
-      await createBooking({
+      const bookingData = {
         farmer_load_id: load.id,
         truck_route_id: truckRoute.id,
         farmer_id: load.farmer_id,
         truck_owner_id: truckOwner.id,
         total_price: truck.estimatedCost,
         distance_km: truck.distance,
-        status: 'pending_truck_acceptance',
-        initiator_type: 'farmer'
-      });
+        status: 'pending_truck_acceptance' as const,
+        initiator_type: 'farmer' as const
+      };
+      
+      console.log('Creating booking with data:', bookingData);
+      
+      // Create booking
+      await createBooking(bookingData);
+
+      console.log('Booking created successfully, updating statuses...');
 
       // Update load status to booked
       await updateLoadStatus(load.id, 'booked');
@@ -197,15 +208,16 @@ const Matches = () => {
       await updateTruckRouteStatus(truckRoute.id, 'booked');
 
       toast({
-        title: "Booking Confirmed!",
-        description: `You've booked ${truck.ownerName}'s truck. Contact details will be shared.`
+        title: "Booking Request Sent!",
+        description: `Your booking request has been sent to ${truck.ownerName}. They will be notified.`
       });
       
       navigate('/farmer-dashboard');
     } catch (error) {
+      console.error('Booking error:', error);
       toast({
         title: "Booking Failed",
-        description: "Unable to confirm booking. Please try again.",
+        description: error instanceof Error ? error.message : "Unable to send booking request. Please try again.",
         variant: "destructive"
       });
     }

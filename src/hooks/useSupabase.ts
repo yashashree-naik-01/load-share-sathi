@@ -40,6 +40,9 @@ export interface TruckRoute {
   available_time?: string;
   price_per_km: number;
   status: 'available' | 'matched' | 'booked' | 'completed';
+  dl_number?: string;
+  number_plate?: string;
+  booked_capacity?: number;
   created_at: string;
   updated_at: string;
 }
@@ -194,6 +197,30 @@ export const useSupabase = () => {
     return data as TruckRoute;
   };
 
+  const cancelBooking = async (bookingId: string) => {
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ 
+        status: 'cancelled',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', bookingId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    setBookings(prev => prev.map(booking => booking.id === bookingId ? data as Booking : booking));
+    return data as Booking;
+  };
+
+  const getAvailableCapacity = async (routeId: string): Promise<number> => {
+    const { data, error } = await supabase
+      .rpc('get_available_capacity', { route_id: routeId });
+    
+    if (error) throw error;
+    return data || 0;
+  };
+
   return {
     profiles,
     farmerLoads,
@@ -205,8 +232,10 @@ export const useSupabase = () => {
     createBooking,
     acceptBooking,
     rejectBooking,
+    cancelBooking,
     updateLoadStatus,
     updateTruckRouteStatus,
+    getAvailableCapacity,
     refetch: fetchData
   };
 };

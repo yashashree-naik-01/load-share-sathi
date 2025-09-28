@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 const TruckDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { truckRoutes, farmerLoads, profiles, bookings, loading, createTruckRoute, createBooking, acceptBooking, rejectBooking, updateTruckRouteStatus, refetch } = useSupabase();
+  const { truckRoutes, farmerLoads, profiles, bookings, loading, createTruckRoute, createBooking, acceptBooking, rejectBooking, cancelBooking, updateTruckRouteStatus, getAvailableCapacity, refetch } = useSupabase();
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const [showRouteForm, setShowRouteForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -163,6 +163,8 @@ const TruckDashboard = () => {
         available_date: formData.availableDate || new Date().toISOString().split('T')[0],
         available_time: null,
         price_per_km: parseFloat(formData.pricePerKm) || 25,
+        dl_number: formData.dlNumber,
+        number_plate: formData.numberPlate,
         status: 'available' as const
       };
 
@@ -214,6 +216,17 @@ const TruckDashboard = () => {
         toast({
           title: "No Compatible Route",
           description: "You need to add a compatible route first to send booking requests.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check available capacity
+      const availableCapacity = await getAvailableCapacity(compatibleRoute.id);
+      if (availableCapacity < load.quantity) {
+        toast({
+          title: "Insufficient Capacity",
+          description: `Route has only ${availableCapacity} tons available, but load requires ${load.quantity} tons.`,
           variant: "destructive"
         });
         return;
@@ -295,6 +308,23 @@ const TruckDashboard = () => {
       toast({
         title: "Error",
         description: "Failed to cancel route. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    try {
+      await cancelBooking(bookingId);
+      toast({
+        title: "Booking Cancelled",
+        description: "The booking has been cancelled successfully.",
+      });
+      refetch();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to cancel booking. Please try again.",
         variant: "destructive",
       });
     }
@@ -772,45 +802,52 @@ const TruckDashboard = () => {
                         </>
                       )}
                       
-                      {/* Show normal action buttons for confirmed bookings */}
-                      {booking.status === 'confirmed' && (
-                        <>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              const farmerLoad = farmerLoads.find(l => l.id === booking.farmer_load_id);
-                              const farmer = profiles.find(p => p.id === farmerLoad?.farmer_id);
-                              if (farmer?.phone) {
-                                window.open(`tel:${farmer.phone}`, '_self');
-                              } else {
-                                toast({
-                                  title: "Contact Info Not Available", 
-                                  description: "Farmer's phone number is not available.",
-                                  variant: "destructive"
-                                });
-                              }
-                            }}
-                          >
-                            <Package className="h-4 w-4 mr-2" />
-                            Contact Farmer
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => {
-                              const farmerLoad = farmerLoads.find(l => l.id === booking.farmer_load_id);
-                              const farmer = profiles.find(p => p.id === farmerLoad?.farmer_id);
-                              toast({
-                                title: "Farmer Details",
-                                description: `Name: ${farmer?.full_name || 'Unknown'}\nCrop: ${farmerLoad?.crop_type || 'Unknown'}\nQuantity: ${farmerLoad?.quantity || 0} ${farmerLoad?.unit || 'kg'}\nPickup: ${farmerLoad?.pickup_location || 'Unknown'}\nDestination: ${farmerLoad?.destination || 'Unknown'}\nPhone: ${farmer?.phone || 'Not available'}`
-                              });
-                            }}
-                          >
-                            View Details
-                          </Button>
-                        </>
-                      )}
+                       {/* Show normal action buttons for confirmed bookings */}
+                       {booking.status === 'confirmed' && (
+                         <>
+                           <Button 
+                             variant="outline" 
+                             size="sm"
+                             onClick={() => {
+                               const farmerLoad = farmerLoads.find(l => l.id === booking.farmer_load_id);
+                               const farmer = profiles.find(p => p.id === farmerLoad?.farmer_id);
+                               if (farmer?.phone) {
+                                 window.open(`tel:${farmer.phone}`, '_self');
+                               } else {
+                                 toast({
+                                   title: "Contact Info Not Available", 
+                                   description: "Farmer's phone number is not available.",
+                                   variant: "destructive"
+                                 });
+                               }
+                             }}
+                           >
+                             <Package className="h-4 w-4 mr-2" />
+                             Contact Farmer
+                           </Button>
+                           <Button 
+                             variant="ghost" 
+                             size="sm"
+                             onClick={() => {
+                               const farmerLoad = farmerLoads.find(l => l.id === booking.farmer_load_id);
+                               const farmer = profiles.find(p => p.id === farmerLoad?.farmer_id);
+                               toast({
+                                 title: "Farmer Details",
+                                 description: `Name: ${farmer?.full_name || 'Unknown'}\nCrop: ${farmerLoad?.crop_type || 'Unknown'}\nQuantity: ${farmerLoad?.quantity || 0} ${farmerLoad?.unit || 'kg'}\nPickup: ${farmerLoad?.pickup_location || 'Unknown'}\nDestination: ${farmerLoad?.destination || 'Unknown'}\nPhone: ${farmer?.phone || 'Not available'}`
+                               });
+                             }}
+                           >
+                             View Details
+                           </Button>
+                           <Button 
+                             variant="destructive" 
+                             size="sm"
+                             onClick={() => handleCancelBooking(booking.id)}
+                           >
+                             Cancel Booking
+                           </Button>
+                         </>
+                       )}
                       
                       {/* Show status for other states */}
                       {booking.status === 'pending_farmer_acceptance' && (

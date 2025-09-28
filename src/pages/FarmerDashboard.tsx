@@ -174,8 +174,8 @@ const FarmerDashboard = () => {
   }
 
   // Get farmer's loads and bookings
-  const userLoads = farmerLoads.filter(load => load.farmer_id === profile.id);
-  const userBookings = bookings.filter(booking => booking.farmer_id === profile.id);
+  const userLoads = profile ? farmerLoads.filter(load => load.farmer_id === profile.id) : [];
+  const userBookings = profile ? bookings.filter(booking => booking.farmer_id === profile.id) : [];
 
   return (
     <div className="min-h-screen bg-background">

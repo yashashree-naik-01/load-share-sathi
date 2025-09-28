@@ -168,11 +168,7 @@ const Matches = () => {
   };
 
   const bookTruck = async (truck: TruckMatch) => {
-    alert('Booking function called!');
-    if (!load || !profile) {
-      alert('Missing load or profile');
-      return;
-    }
+    if (!load || !profile) return;
     
     try {
       console.log('Starting booking process...', { loadId: load.id, truckId: truck.id });

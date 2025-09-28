@@ -25,6 +25,7 @@ const TruckDashboard = () => {
     pricePerKm: '',
     vehicleType: ''
   });
+  const [compatibleLoads, setCompatibleLoads] = useState<any[]>([]);
 
   const indianCities = [
     'Mumbai, Maharashtra', 'Delhi, Delhi', 'Pune, Maharashtra', 'Ahmedabad, Gujarat',
@@ -183,9 +184,6 @@ const TruckDashboard = () => {
     );
   }
 
-  // Get truck owner's routes and available loads
-  const userRoutes = truckRoutes.filter(route => route.truck_owner_id === profile?.id);
-  const availableLoads = farmerLoads.filter(load => load.status === 'pending');
   
   // Get compatible loads using AI analysis
   const getCompatibleLoads = () => {
@@ -226,7 +224,9 @@ const TruckDashboard = () => {
     return compatibleLoads.sort((a, b) => b.profitMargin - a.profitMargin);
   };
   
-  const [compatibleLoads, setCompatibleLoads] = useState<any[]>([]);
+  // Get truck owner's routes and available loads
+  const userRoutes = truckRoutes.filter(route => route.truck_owner_id === profile?.id);
+  const availableLoads = farmerLoads.filter(load => load.status === 'pending');
   
   useEffect(() => {
     if (!loading && userRoutes.length > 0 && availableLoads.length > 0) {

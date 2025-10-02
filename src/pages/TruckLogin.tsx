@@ -66,15 +66,18 @@ const TruckLogin = () => {
   // Redirect based on user type after login
   useEffect(() => {
     if (user && profile && !authLoading) {
+      console.log('TruckLogin - Profile loaded:', profile);
       if (profile.user_type === 'truck_owner') {
-        navigate('/truck-dashboard');
+        console.log('TruckLogin - Navigating to truck-dashboard');
+        navigate('/truck-dashboard', { replace: true });
       } else {
+        console.log('TruckLogin - Wrong user type, showing error');
         toast({
           title: "Wrong Account Type",
           description: "Please use the grain merchant login page.",
           variant: "destructive"
         });
-        navigate('/merchant-login');
+        setTimeout(() => navigate('/merchant-login', { replace: true }), 1000);
       }
     }
   }, [user, profile, authLoading, navigate, toast]);

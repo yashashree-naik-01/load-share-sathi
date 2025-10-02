@@ -29,25 +29,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
-          setTimeout(async () => {
+          // Fetch user profile immediately
+          const fetchProfile = async () => {
             try {
-              const { data: profileData } = await supabase
+              const { data: profileData, error } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('user_id', session.user.id)
                 .single();
               
-              setProfile(profileData as Profile);
+              if (error) {
+                console.error('Error fetching profile:', error);
+              } else {
+                console.log('Profile fetched successfully:', profileData);
+                setProfile(profileData as Profile);
+              }
             } catch (error) {
               console.error('Error fetching profile:', error);
+            } finally {
+              setLoading(false);
             }
-          }, 0);
+          };
+          
+          fetchProfile();
         } else {
           setProfile(null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 

@@ -66,15 +66,18 @@ const MerchantLogin = () => {
   // Redirect based on user type after login
   useEffect(() => {
     if (user && profile && !authLoading) {
+      console.log('MerchantLogin - Profile loaded:', profile);
       if (profile.user_type === 'farmer') {
-        navigate('/farmer-dashboard');
+        console.log('MerchantLogin - Navigating to farmer-dashboard');
+        navigate('/farmer-dashboard', { replace: true });
       } else {
+        console.log('MerchantLogin - Wrong user type, showing error');
         toast({
           title: "Wrong Account Type",
           description: "Please use the truck owner login page.",
           variant: "destructive"
         });
-        navigate('/truck-login');
+        setTimeout(() => navigate('/truck-login', { replace: true }), 1000);
       }
     }
   }, [user, profile, authLoading, navigate, toast]);

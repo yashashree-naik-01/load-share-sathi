@@ -1,0 +1,186 @@
+{
+  "nav": {
+    "merchantLogin": "Merchant Login",
+    "truckLogin": "Truck Login",
+    "getStarted": "Get Started",
+    "logout": "Logout",
+    "welcome": "Welcome"
+  },
+  "hero": {
+    "title": "Smart Logistics. Zero Empty Miles.",
+    "subtitle": "AI-powered platform that matches farmers' transport needs with truck owners, reducing empty trips and making logistics more efficient and affordable.",
+    "merchantBtn": "I'm a Grain Merchant",
+    "truckBtn": "I Own a Truck"
+  },
+  "problem": {
+    "title": "The Problem We're Solving",
+    "p1": "Trucks return empty after deliveries, wasting fuel and money",
+    "p2": "Grain merchants struggle to find affordable transport for their goods",
+    "p3": "Inefficient logistics increase costs for community"
+  },
+  "solution": {
+    "title": "Our AI-Powered Solution",
+    "s1": "Smart matching engine connects grain merchants with available trucks",
+    "s2": "Optimize routes and capacity to reduce empty trips",
+    "s3": "Cost-effective transport solutions for communities"
+  },
+  "features": {
+    "title": "How SmartLoad Works",
+    "merchant": {
+      "title": "For Grain Merchants",
+      "subtitle": "Post your goods that need transportation",
+      "l1": "Specify goods type and weight",
+      "l2": "Set pickup location and timing",
+      "l3": "Get matched with suitable trucks",
+      "l4": "Confirm bookings easily"
+    },
+    "truck": {
+      "title": "For Truck Owners",
+      "subtitle": "Maximize your trips and reduce empty runs",
+      "l1": "Post vehicle details and routes",
+      "l2": "Set capacity and pricing",
+      "l3": "Receive load requests",
+      "l4": "Optimize your earnings"
+    },
+    "ai": {
+      "title": "AI Matching",
+      "subtitle": "Smart algorithms for optimal matches",
+      "l1": "Distance optimization",
+      "l2": "Capacity matching",
+      "l3": "Cost calculation",
+      "l4": "Real-time updates"
+    }
+  },
+  "cta": {
+    "title": "Ready to Transform Logistics?",
+    "subtitle": "Join thousands of grain merchants and truck owners already saving money and reducing waste.",
+    "button": "Start Your Journey Today"
+  },
+  "footer": {
+    "tagline": "Connecting India through smart transport solutions.",
+    "merchant": {
+      "title": "For Grain Merchants",
+      "postLoads": "Post Loads",
+      "findTrucks": "Find Trucks",
+      "track": "Track Shipments"
+    },
+    "truck": {
+      "title": "For Truck Owners",
+      "findLoads": "Find Loads",
+      "routes": "Manage Routes",
+      "maximize": "Maximize Earnings"
+    },
+    "support": {
+      "title": "Support",
+      "help": "Help Center",
+      "contact": "Contact Us",
+      "terms": "Terms of Service"
+    },
+    "copyright": "© 2024 SmartLoad. Made with ❤️ for India."
+  },
+  "login": {
+    "title": "Welcome Back",
+    "subtitle": "Login to your SmartLoad account",
+    "email": "Email Address",
+    "password": "Password",
+    "submit": "Login",
+    "loggingIn": "Logging in...",
+    "noAccount": "Don't have an account?",
+    "register": "Register here"
+  },
+  "register": {
+    "title": "Join SmartLoad",
+    "subtitle": "Choose your account type to get started",
+    "merchant": {
+      "title": "I'm a Grain Merchant",
+      "subtitle": "I have goods that need transportation",
+      "l1": "Post your produce for transport",
+      "l2": "Get competitive pricing",
+      "l3": "Track your shipments",
+      "l4": "Connect with reliable trucks"
+    },
+    "truck": {
+      "title": "I Own a Truck",
+      "subtitle": "I want to find loads for my vehicle",
+      "l1": "Find loads on your routes",
+      "l2": "Reduce empty trips",
+      "l3": "Maximize your earnings",
+      "l4": "Build customer relationships"
+    },
+    "merchantReg": "Grain Merchant Registration",
+    "truckReg": "Truck Owner Registration",
+    "createAccount": "Create your account to start",
+    "findingTransport": "finding transport",
+    "findingLoads": "finding loads",
+    "name": "Full Name",
+    "phone": "Phone Number (10 digits)",
+    "location": "Business Location",
+    "selectState": "Select your state",
+    "vehicleType": "Vehicle Type",
+    "dlNumber": "Driver License Number",
+    "numberPlate": "Number Plate",
+    "submit": "Create Account",
+    "creating": "Creating Account...",
+    "haveAccount": "Already have an account?",
+    "loginHere": "Login here",
+    "backHome": "Back to Home"
+  },
+  "farmerDashboard": {
+    "title": "Grain Merchant Dashboard",
+    "myLoads": "My Loads",
+    "subtitle": "Manage your transportation requests",
+    "findMatches": "Find AI Matches",
+    "postNew": "Post New Load",
+    "postTitle": "Post New Load",
+    "postSubtitle": "Provide details about your goods that need transportation",
+    "goodsType": "Goods Type",
+    "weight": "Weight (in tons)",
+    "pickupLocation": "Pickup Location",
+    "dropLocation": "Drop Location",
+    "pickupDate": "Pickup Date",
+    "expectedPrice": "Expected Price (₹)",
+    "additionalDetails": "Additional Details",
+    "submit": "Post Load",
+    "cancel": "Cancel",
+    "noLoads": "No loads posted yet",
+    "noLoadsDesc": "Start by posting your first load to find trucks",
+    "postFirst": "Post Your First Load",
+    "viewMatches": "View Matches",
+    "booked": "Booked",
+    "completed": "Completed",
+    "cancelLoad": "Cancel Load",
+    "myBookings": "My Bookings"
+  },
+  "truckDashboard": {
+    "title": "Truck Owner Dashboard",
+    "myRoutes": "My Routes",
+    "subtitle": "Manage your vehicle routes and find loads",
+    "postRoute": "Post New Route",
+    "postTitle": "Post New Route",
+    "postSubtitle": "Provide details about your available route and capacity",
+    "fromLocation": "From Location",
+    "toLocation": "To Location",
+    "availableDate": "Available Date",
+    "capacity": "Available Capacity (tons)",
+    "pricePerKm": "Price per KM (₹)",
+    "submit": "Post Route",
+    "cancel": "Cancel",
+    "noRoutes": "No routes posted yet",
+    "noRoutesDesc": "Start by posting your first route to find loads",
+    "postFirst": "Post Your First Route",
+    "cancelRoute": "Cancel Route",
+    "availableLoads": "Available Loads",
+    "noAvailableLoads": "No available loads at the moment",
+    "checkBack": "Check back later for new opportunities"
+  },
+  "common": {
+    "from": "From",
+    "to": "To",
+    "pickup": "Pickup",
+    "posted": "Posted",
+    "matched": "Matched",
+    "available": "Available",
+    "selectCity": "Select city",
+    "enterValue": "Enter value"
+  }
+}

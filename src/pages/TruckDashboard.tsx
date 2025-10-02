@@ -247,10 +247,10 @@ const TruckDashboard = () => {
         initiator_type: 'truck_owner'
       });
       
-      toast({
-        title: "Booking Request Sent!",
-        description: `Your booking request has been sent to the farmer. They will be notified to accept or reject.`
-      });
+        toast({
+          title: "Booking Request Sent!",
+          description: `Your booking request has been sent to the grain merchant. They will be notified to accept or reject.`
+        });
       
     } catch (error) {
       console.error('Error sending booking request:', error);
@@ -267,7 +267,7 @@ const TruckDashboard = () => {
       await acceptBooking(bookingId, 'truck_owner');
       toast({
         title: "Booking Accepted!",
-        description: "You've accepted the booking request. The farmer will be notified."
+        description: "You've accepted the booking request. The grain merchant will be notified."
       });
     } catch (error) {
       console.error('Error accepting booking:', error);
@@ -693,7 +693,7 @@ const TruckDashboard = () => {
                                   <div key={booking.id} className="flex justify-between items-center p-2 bg-muted rounded-lg">
                                     <div className="space-y-1">
                                       <div className="text-sm font-medium text-foreground">
-                                        {farmer?.full_name || 'Unknown Farmer'}
+                                        {farmer?.full_name || 'Unknown Merchant'}
                                       </div>
                                       <div className="text-xs text-muted-foreground">
                                         {load?.quantity} {load?.unit} - {load?.crop_type}
@@ -761,7 +761,7 @@ const TruckDashboard = () => {
                     <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-foreground mb-2">No loads available</h3>
                     <p className="text-muted-foreground">
-                      Check back later for new load requests from farmers
+                      Check back later for new load requests from grain merchants
                     </p>
                   </CardContent>
                 </Card>
@@ -817,7 +817,7 @@ const TruckDashboard = () => {
                         
                         <div className="flex justify-between items-center">
                           <div className="text-sm text-muted-foreground">
-                            Farmer Load Request
+                            Grain Merchant Load Request
                           </div>
                           <Button 
                             variant="default" 
@@ -912,14 +912,14 @@ const TruckDashboard = () => {
                                } else {
                                  toast({
                                    title: "Contact Info Not Available", 
-                                   description: "Farmer's phone number is not available.",
+                                   description: "Merchant's phone number is not available.",
                                    variant: "destructive"
                                  });
                                }
                              }}
                            >
                              <Package className="h-4 w-4 mr-2" />
-                             Contact Farmer
+                             Contact Merchant
                            </Button>
                            <Button 
                              variant="ghost" 
@@ -927,10 +927,10 @@ const TruckDashboard = () => {
                              onClick={() => {
                                const farmerLoad = farmerLoads.find(l => l.id === booking.farmer_load_id);
                                const farmer = profiles.find(p => p.id === farmerLoad?.farmer_id);
-                               toast({
-                                 title: "Farmer Details",
-                                 description: `Name: ${farmer?.full_name || 'Unknown'}\nCrop: ${farmerLoad?.crop_type || 'Unknown'}\nQuantity: ${farmerLoad?.quantity || 0} ${farmerLoad?.unit || 'kg'}\nPickup: ${farmerLoad?.pickup_location || 'Unknown'}\nDestination: ${farmerLoad?.destination || 'Unknown'}\nPhone: ${farmer?.phone || 'Not available'}`
-                               });
+                                toast({
+                                  title: "Merchant Details",
+                                  description: `Name: ${farmer?.full_name || 'Unknown'}\nCrop: ${farmerLoad?.crop_type || 'Unknown'}\nQuantity: ${farmerLoad?.quantity || 0} ${farmerLoad?.unit || 'kg'}\nPickup: ${farmerLoad?.pickup_location || 'Unknown'}\nDestination: ${farmerLoad?.destination || 'Unknown'}\nPhone: ${farmer?.phone || 'Not available'}`
+                                });
                              }}
                            >
                              View Details
@@ -947,7 +947,7 @@ const TruckDashboard = () => {
                       
                       {/* Show status for other states */}
                       {booking.status === 'pending_farmer_acceptance' && (
-                        <Badge variant="secondary">Waiting for farmer response</Badge>
+                        <Badge variant="secondary">Waiting for merchant response</Badge>
                       )}
                       {booking.status === 'rejected' && (
                         <Badge variant="destructive">Request Rejected</Badge>

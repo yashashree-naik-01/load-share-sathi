@@ -42,9 +42,9 @@ const FarmerDashboard = () => {
   ];
 
   useEffect(() => {
-    // Redirect if not authenticated or not a farmer
+    // Redirect if not authenticated or not a grain merchant
     if (!authLoading && (!user || !profile)) {
-      navigate('/login');
+      navigate('/merchant-login');
       return;
     }
     
@@ -226,7 +226,7 @@ const FarmerDashboard = () => {
               <Truck className="h-8 w-8 text-primary" />
               <span className="text-2xl font-bold text-primary">SmartLoad</span>
             </div>
-            <span className="text-muted-foreground">Farmer Dashboard</span>
+            <span className="text-muted-foreground">Grain Merchant Dashboard</span>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-foreground">Welcome, {profile.full_name}</span>

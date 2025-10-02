@@ -7,6 +7,8 @@ import { AuthProvider } from "./hooks/useAuth";
 import Index from "./pages/Index";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import MerchantLogin from "./pages/MerchantLogin";
+import TruckLogin from "./pages/TruckLogin";
 import FarmerDashboard from "./pages/FarmerDashboard";
 import TruckDashboard from "./pages/TruckDashboard";
 import Matches from "./pages/Matches";
@@ -25,6 +27,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/merchant-login" element={<MerchantLogin />} />
+            <Route path="/truck-login" element={<TruckLogin />} />
             <Route path="/farmer-dashboard" element={<FarmerDashboard />} />
             <Route path="/truck-dashboard" element={<TruckDashboard />} />
             <Route path="/matches/:loadId" element={<Matches />} />

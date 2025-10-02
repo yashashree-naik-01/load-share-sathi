@@ -16,7 +16,8 @@ const Index = () => {
             <span className="text-2xl font-bold text-primary">SmartLoad</span>
           </div>
           <div className="flex space-x-4">
-            <Button variant="ghost" onClick={() => navigate('/login')}>Login</Button>
+            <Button variant="ghost" onClick={() => navigate('/merchant-login')}>Merchant Login</Button>
+            <Button variant="ghost" onClick={() => navigate('/truck-login')}>Truck Login</Button>
             <Button variant="hero" onClick={() => navigate('/register')}>Get Started</Button>
           </div>
         </div>
@@ -41,7 +42,7 @@ const Index = () => {
               onClick={() => navigate('/register?type=farmer')}
               className="text-lg px-8 py-4"
             >
-              I'm a Farmer <ArrowRight className="ml-2" />
+              I'm a Grain Merchant <ArrowRight className="ml-2" />
             </Button>
             <Button 
               size="lg" 
@@ -77,7 +78,7 @@ const Index = () => {
                     <span className="text-destructive-foreground text-sm">!</span>
                   </div>
                   <p className="text-muted-foreground">
-                    Farmers struggle to find affordable transport for their goods
+                    Grain merchants struggle to find affordable transport for their goods
                   </p>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -98,7 +99,7 @@ const Index = () => {
                 <div className="flex items-start space-x-3">
                   <CheckCircle className="w-6 h-6 text-primary mt-1" />
                   <p className="text-muted-foreground">
-                    Smart matching engine connects farmers with available trucks
+                    Smart matching engine connects grain merchants with available trucks
                   </p>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -131,7 +132,7 @@ const Index = () => {
                 <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
                   <Users className="w-8 h-8 text-primary-foreground" />
                 </div>
-                <CardTitle className="text-primary">For Farmers</CardTitle>
+                <CardTitle className="text-primary">For Grain Merchants</CardTitle>
                 <CardDescription>
                   Post your goods that need transportation
                 </CardDescription>
@@ -196,7 +197,7 @@ const Index = () => {
             Ready to Transform Logistics?
           </h2>
           <p className="text-xl text-trust-foreground/80 mb-8 max-w-2xl mx-auto">
-            Join thousands of farmers and truck owners already saving money and reducing waste.
+            Join thousands of grain merchants and truck owners already saving money and reducing waste.
           </p>
           <Button 
             size="lg" 
@@ -223,7 +224,7 @@ const Index = () => {
               </p>
             </div>
             <div>
-              <h3 className="font-semibold text-foreground mb-4">For Farmers</h3>
+              <h3 className="font-semibold text-foreground mb-4">For Grain Merchants</h3>
               <ul className="space-y-2 text-muted-foreground">
                 <li>Post Loads</li>
                 <li>Find Trucks</li>

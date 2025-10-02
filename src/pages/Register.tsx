@@ -23,7 +23,7 @@ const Register = () => {
     email: '',
     password: '',
     phone: '',
-    // Farmer specific
+    // Grain Merchant specific
     farmLocation: '',
     // Truck specific
     vehicleType: '',
@@ -141,7 +141,7 @@ const Register = () => {
                 <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
                   <Users className="w-8 h-8 text-primary-foreground" />
                 </div>
-                <CardTitle className="text-primary">I'm a Farmer</CardTitle>
+                <CardTitle className="text-primary">I'm a Grain Merchant</CardTitle>
                 <CardDescription>
                   I have goods that need transportation
                 </CardDescription>
@@ -204,7 +204,7 @@ const Register = () => {
             }
           </div>
           <CardTitle className={selectedType === 'farmer' ? 'text-primary' : 'text-secondary'}>
-            {selectedType === 'farmer' ? 'Farmer Registration' : 'Truck Owner Registration'}
+            {selectedType === 'farmer' ? 'Grain Merchant Registration' : 'Truck Owner Registration'}
           </CardTitle>
           <CardDescription>
             Create your account to start {selectedType === 'farmer' ? 'finding transport' : 'finding loads'}
@@ -267,7 +267,7 @@ const Register = () => {
             {/* Type-specific fields */}
             {selectedType === 'farmer' && (
               <div className="space-y-2">
-                <Label htmlFor="farmLocation">Farm Location</Label>
+                <Label htmlFor="farmLocation">Business Location</Label>
                 <Select onValueChange={(value) => updateFormData('farmLocation', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select your state" />
